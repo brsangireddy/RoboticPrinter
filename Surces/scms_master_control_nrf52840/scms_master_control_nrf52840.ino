@@ -131,7 +131,8 @@ void SetupSerialPort()
 
 void ReadData()
 {
-  bool dir,mode;
+  byte chas_dir,lm_mode;
+  bool mot_dir,on_off;
   int32_t angle,dist_ang,n_times;
   if(bleuart.available())
   {
@@ -148,39 +149,57 @@ void ReadData()
     //packetbuffer[1] = packetbuffer[1]-0x30;
     if(packetbuffer[2] == CMD_MVMT)
     {
-      dir = packetbuffer[4]-0x30;
+      mot_dir = packetbuffer[4]-0x30;
       sscanf(&packetbuffer[6],"%d",&angle);
       if(packetbuffer[1] == CT_FSM)
       {
-        RotateSmFront(dir,angle);
+        RotateSmFront(mot_dir,angle);
       }
       if(packetbuffer[1] == CT_RSM)
       {
    
-        RotateSmRear(dir,angle);
+        RotateSmRear(mot_dir,angle);
       }
     }
        
     if(packetbuffer[1] == CT_MWR)
     {
-      dir = packetbuffer[4]-0x30;
+      chas_dir = packetbuffer[4]-0x30;
       sscanf(&packetbuffer[6],"%d",&dist_ang);
-      MoveRobot(dir,dist_ang);
+      Serial.print("dist_ang: ");Serial.println(dist_ang);
+      MoveRobot(chas_dir,dist_ang);
       
     }
     if(packetbuffer[1] == CT_FL)
     {
-      mode = packetbuffer[4]-0x30;
+      lm_mode = packetbuffer[4]-0x30;
       sscanf(&packetbuffer[6],"%d",&n_times);
-      GetMesurment_FL(n_times,mode);
+      if(packetbuffer[2] == 'L')
+      {
+        on_off = packetbuffer[4]-0x30;
+        LaserControl(on_off);
+      }
+      else
+      {
+        GetMesurment_FL(lm_mode,n_times);
+      }
+        
     }
     if(packetbuffer[1] == CT_RL)
     {
-      mode = packetbuffer[4]-0x30;
+      lm_mode = packetbuffer[4]-0x30;
       sscanf(&packetbuffer[6],"%d",&n_times);
-      GetMesurment_RL(n_times,mode);
+      if(packetbuffer[2] == 'L')
+      {
+        on_off = packetbuffer[4]-0x30;
+        LaserControl(on_off);
+      }
+      else
+      {
+        GetMesurment_RL(lm_mode,n_times);
+      }
     }
-
+    
 /*
     if(packetbuffer[1] == CorBeacon)
     {
@@ -395,21 +414,21 @@ void SelectPort(uint8_t p_num)
 void MoveRobot(uint8_t dir, uint32_t dist_ang)
 {
   char sta='p';
-  char CmdBuf[10];
+  char CmdBuf[20];
   CmdBuf[0]='!';
   CmdBuf[1]='3';
   CmdBuf[2]='M';
   CmdBuf[3]=',';
   CmdBuf[4]=(char)(dir+0x30);
   CmdBuf[5]=',';
-  CmdBuf[6]=dist_ang;
+  //CmdBuf[6]=dist_ang;
   memcpy(&CmdBuf[6], &dist_ang, sizeof(dist_ang));
   //packetbuffer[6]=(char)dist_ang;
   //sscanf(&CmdBuf[6],"%d",&dist_ang);
-  Serial.print("direction: ");Serial.println(dir);
-  Serial.println("Angle: ");Serial.println(dist_ang);
+  //sprintf(&CmdBuf[6],"%d",dist_ang);
+  Serial.print("direction: ");Serial.print(dir); Serial.print("dist_ang: ");Serial.println(dist_ang);
   SelectPort(WC_SPORT);
-  for(int s=0; s<10 ; s++)
+  for(int s=0; s<20 ; s++)
   {
     Serial1.write(CmdBuf[s]);
     
@@ -438,11 +457,16 @@ void RotateSmRear(bool dir, uint32_t angle)
   //sscanf(&CmdBuf[6],"%d",angle);
   Serial.print("direction: ");Serial.println(dir);
   Serial.println("Angle: ");Serial.println(angle);
+  for(int s=0;s<7;s++)
+  {
+    Serial.print(CmdBuf[s],HEX);Serial.print(" ");
+   
+  }
   SelectPort(SM_SPORT);
   for(int s=0; s<7 ; s++)
   {
     Serial1.write(CmdBuf[s]);
-    bleuart.print(CmdBuf[s]);
+    //bleuart.print(CmdBuf[s]);
   }
   do
   {
@@ -470,14 +494,14 @@ void RotateSmFront(bool dir, uint32_t angle)
   Serial.println("Angle: ");Serial.println((uint32_t)CmdBuf[6],DEC);
   for(int s=0;s<7;s++)
   {
-    Serial.print(CmdBuf[s]);
+    Serial.print(CmdBuf[s],HEX);Serial.print(" ");
    
   }
   SelectPort(SM_SPORT);
   for(int s=0; s<7 ; s++)
   {
     Serial1.write(CmdBuf[s]);
-     bleuart.print(CmdBuf[s]);
+     //bleuart.print(CmdBuf[s]);
   }
   do
   {
@@ -495,6 +519,7 @@ void LaserControl(bool on_off) // format is !PLX where X = 0 or 1 and P = 4 or 5
   for (int i=0; i<LMC_SEQ_SIZE; i++)
   {
     Serial1.write(laser_onoff_cmd_seq[on_off][i]);
+    Serial.print(laser_onoff_cmd_seq[on_off][i],HEX);Serial.print(" ");
   }
   delay(1000);
 
@@ -575,9 +600,7 @@ uint32_t GetMesurment_FL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
       if(Serial1.available())
       MeasResult[i]=Serial1.read();
       }
-      FLDistance = (uint32_t)MeasResult[6];
-      Serial.print("FL Measured ditance: ");Serial.println(FLDistance);
-      bleuart.print("FL Distance in mm: ");bleuart.println(FLDistance);
+      
       FLDistance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
       Serial.print("FL Measured ditance: ");Serial.println(FLDistance);
       bleuart.print("FL Distance in mm: ");bleuart.println(FLDistance);
@@ -588,7 +611,7 @@ uint32_t GetMesurment_FL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
 
 uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
 {
-  RLDistance =0;
+  RLDistance = 0;
   Serial.print("Rear Laser Measurement Mode: ");Serial.println(mode);
   Serial.print("Number of times: ");Serial.println(n_times);
   
@@ -642,9 +665,7 @@ uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
         if(Serial1.available())
         MeasResult[i]=Serial1.read();
       }
-      RLDistance = (uint32_t)MeasResult[6];
-      Serial.print("RL Measured ditance: ");Serial.println(RLDistance);
-      bleuart.print("RL Distance in mm: ");bleuart.println(RLDistance);
+      
       RLDistance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
       Serial.print("RL Measured ditance: ");Serial.println(RLDistance);
       bleuart.print("RL Distance in mm: ");bleuart.println(RLDistance);

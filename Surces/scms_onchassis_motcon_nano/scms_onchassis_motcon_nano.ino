@@ -77,8 +77,8 @@ void setup(void)
   SetupFrontMotor();
   SetupBackMotor(); // Setup Stepper Motor
   Serial.println("Chassis Laser and Motor Testing !!!"); 
-  //SetFrontBeaconLaser(); 
-  //SetBackBeaconLaser();
+  SetFrontBeaconLaser(); 
+  SetBackBeaconLaser();
   //Status=1;
   //chassisBeacon.write(Status);
 }
@@ -258,7 +258,7 @@ uint8_t set_angleFront()
     {
       digitalWrite(SmFEn,HIGH);
      
-      Serial.println("set zero angle is done");
+      //Serial.println("set zero angle is done");
     }
     digitalWrite(SmFPulse,HIGH); 
     delayMicroseconds(100); 
@@ -274,7 +274,7 @@ uint8_t set_angleFront()
     {
       digitalWrite(SmFEn,HIGH);
       
-      Serial.println("set zero angle is done");
+      //Serial.println("set zero angle is done");
     }
     digitalWrite(SmFPulse,HIGH); 
     delayMicroseconds(100); 
@@ -340,7 +340,7 @@ uint8_t set_angleBack()
     {
       digitalWrite(SmBEn,HIGH);
      
-      Serial.println("Fzero angle is done");
+      //Serial.println("Fzero angle is done");
     }
     digitalWrite(SmBPulse,HIGH); 
     delayMicroseconds(100); 
@@ -356,7 +356,7 @@ uint8_t set_angleBack()
     {
       digitalWrite(SmBEn,HIGH);
       
-      Serial.println("set zero angle is done");
+      //Serial.println("set zero angle is done");
     }
     digitalWrite(SmBPulse,HIGH); 
     delayMicroseconds(100); 

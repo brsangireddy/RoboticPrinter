@@ -89,9 +89,9 @@ void ReadData(void)
     Serial.println("Serial PC: ");
     for(uint8_t z=0;z<len;z++) //print the readpacket in pc serial 
     {
-      Serial.print(packetbuffer[z]);
+      Serial.print(packetbuffer[z],HEX);Serial.print(" ");
     }
-  
+  Serial.println();
     if (packetbuffer[2] == 'V')   // VerS1on
     {
         DispVer();
@@ -110,8 +110,10 @@ void ReadData(void)
       return;
       */
       dir = packetbuffer[4]-0x30;
-      sscanf(&packetbuffer[6], "%d", &distance);
-      Serial.print("Direction: ");Serial.print(dir);Serial.print("Distance(mm): ");Serial.println(distance);
+      //distance = packetbuffer[6];
+      //sscanf(&packetbuffer[6], "%d", &distance);
+      memcpy(&distance, &packetbuffer[6], sizeof(distance));
+      Serial.print("Direction: ");Serial.print(dir);Serial.print(" Distance(mm): ");Serial.println(distance);
       
       MecanumMove(distance,dir);
     }
@@ -307,7 +309,7 @@ uint8_t  readPacket(uint16_t timeout)
 void MecanumMove(uint32_t distance, int chas_dir) // format is !3M,XX,YYYYYYY, XX = Mode of Mecanum Robot, YYYYYYY = Distance in cm
 {
   wheelSteps = distance*SPMM; //Calculate number steps for wheels to be driven for given distance
-  Serial.print("MecanumMove Cmd, Distance(mm): ");Serial.print(distance);Serial.print("Steps: ");Serial.println(wheelSteps);
+  Serial.print("Chassis Dir: ");Serial.print(chas_dir);Serial.print(" MecanumMove Distance(mm): ");Serial.print(distance);Serial.print(" Steps: ");Serial.println(wheelSteps);
   S1.print("Mecanum Moving steps: ");S1.println(wheelSteps);
 
   mfl = 1;              // Set flag for mecanum move
@@ -358,7 +360,7 @@ void ResetMotors()
 }
 
 // *********************** Move Subroutines **************
-void MoveForward() 
+void RotateRight() 
 {
   LeftFrontWheel.moveTo(wheelSteps);
   LeftBackWheel.moveTo(wheelSteps);
@@ -366,7 +368,7 @@ void MoveForward()
   RightBackWheel.moveTo(wheelSteps);
 }
 
-void MoveBackward() 
+void RotateLeft() 
 {
   LeftFrontWheel.moveTo(-wheelSteps);
   LeftBackWheel.moveTo(-wheelSteps);
@@ -407,14 +409,14 @@ void MoveLeftBackward()
   LeftFrontWheel.moveTo(-wheelSteps);
   RightBackWheel.moveTo(-wheelSteps);
 }
-void RotateLeft() 
+void MoveForward() 
 {
   LeftFrontWheel.moveTo(-wheelSteps);
   LeftBackWheel.moveTo(-wheelSteps);
   RightFrontWheel.moveTo(wheelSteps);
   RightBackWheel.moveTo(wheelSteps);
 }
-void RotateRight() 
+void MoveBackward() 
 {
   LeftFrontWheel.moveTo(wheelSteps);
   LeftBackWheel.moveTo(wheelSteps);
