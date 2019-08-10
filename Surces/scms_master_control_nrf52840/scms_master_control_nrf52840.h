@@ -87,4 +87,7 @@ uint8_t MeasResult[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
 
 bool beacon_responce_flag = false;
 char corner_beacon_responce[20+1] = { 0 };
+
+char beacon_names[4][32] = { "LCbb_CBEACON_00","LCbb_CBEACON_01","LCbb_CBEACON_02","LCbb_CBEACON_03" };
+byte cbeacon_sel = 0; //Corner Beacon Selected
 #endif //SCMS_MASTER_CONTROL_NRF52840_H

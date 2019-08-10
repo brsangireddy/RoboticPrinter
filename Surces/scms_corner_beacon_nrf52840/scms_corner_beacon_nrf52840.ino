@@ -3,12 +3,12 @@
  Written by Dr Azam, Date : 21st June 2019
  
 *********************************************************************/
+
 #include <bluefruit.h>
 #include <string.h>
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include "scms_corner_beacon_nrf52840.h"
-
 
 #define READ_BUFSIZE                    (20)
 

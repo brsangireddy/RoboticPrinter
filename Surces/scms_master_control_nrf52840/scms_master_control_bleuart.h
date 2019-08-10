@@ -54,7 +54,7 @@ void SetupBlue(void)
   // SRAM usage required by SoftDevice will increase with number of connections
   Bluefruit.begin(1, 1);
   Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
-  Bluefruit.setName("LCbb_CC01");
+  Bluefruit.setName("LCbb_RCONTROL_00");
 
   // Callbacks for Peripheral
   Bluefruit.Periph.setConnectCallback(prph_connect_callback);
@@ -198,9 +198,17 @@ void cent_connect_callback(uint16_t conn_handle)
 
   char peer_name[32] = { 0 };
   connection->getPeerName(peer_name, sizeof(peer_name));
-
-  Serial.print("[Cent] Connected to ");
-  Serial.println(peer_name);;
+  if(strcmp(peer_name,beacon_names[cbeacon_sel]) != 0)
+  {
+    Bluefruit.disconnect(conn_handle);
+    Serial.print("[Cent] DisConnected to ");
+    Serial.println(peer_name);
+  }
+  else
+  {
+    Serial.print("[Cent] Connected to ");
+    Serial.println(peer_name);
+  }
 
   if ( clientUart.discover(conn_handle) )
   {

@@ -1,18 +1,5 @@
-#ifndef SCMS_CORNER_BEACON_NRF52840_H
-#define SCMS_CORNER_BEACON_NRF52840_H
-
-#define   led1        7
-#define   dirPin      29
-#define   stepPin     28
-#define   sensor_pin  5
-
-
-#define EnMotorsPin 30
-#define CW          1
-#define ACW         0
-#define SPD         222.222     //steps per one degree rotation of stepper motor
-//#define READ_BUFSIZE                    (20)
-
+#ifndef SCMS_CONER_BEACON_NRF52840_H
+#define SCMS_CONER_BEACON_NRF52840_H
 
 char m;
 uint32_t wheelSteps=0;
@@ -28,9 +15,36 @@ int32_t new_pos=0;
 long current_pos=0;
 //long new_pos;
 
+
+
+
+
+
+#define  led1 7
+#define  dirPin 29
+#define  stepPin 28
+#define sensor_pin 5
+
+
+#define EnMotorsPin 30
+
+
+
+ 
+
+
+
+//#define READ_BUFSIZE                    (20)
+
 void Home_pos();
 void rotate_sm(bool dir, int32_t new_pos);
 uint8_t set_angle();
+
+
+
+#define CW 1
+#define ACW 0
+#define SPD 222.222     //steps per one degree rotation of stepper motor
 
 void rotate_sm(bool dir, int32_t new_pos)  //new_pos in degree
 {
@@ -66,15 +80,18 @@ void rotate_sm(bool dir, int32_t new_pos)  //new_pos in degree
   {
     net_angle=180;
   }
-  wheelSteps=net_angle*SPD;  
+  wheelSteps=net_angle*SPD;
+  
+  
   delay(500);
-  for(long steps = 0; steps < wheelSteps; steps++)
-  {
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100);
+  for(long steps = 0; steps < wheelSteps; steps++){
+       
+         digitalWrite(stepPin,HIGH); 
+         delayMicroseconds(100); 
+         digitalWrite(stepPin,LOW); 
+         delayMicroseconds(100);
    }
+    
 }
 
 
@@ -82,12 +99,8 @@ uint8_t set_angle()
 {
   digitalWrite(EnMotorsPin,LOW);
   digitalWrite(dirPin,LOW);
-  for(int x = 0; x < 40000; x++)
-  {
-    if(digitalRead(sensor_pin))
-    {
-      digitalWrite(EnMotorsPin,HIGH);   
-    }
+  for(int x = 0; x < 40000; x++) {
+    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);   
     digitalWrite(stepPin,HIGH); 
     delayMicroseconds(100); 
     digitalWrite(stepPin,LOW); 
@@ -97,51 +110,48 @@ uint8_t set_angle()
   }
   delay(1000);
   digitalWrite(dirPin,HIGH);
-  for(int x = 0; x < 80000; x++)
-  {
+  for(int x = 0; x < 80000; x++) {
     if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
     digitalWrite(stepPin,HIGH); 
     delayMicroseconds(100); 
     digitalWrite(stepPin,LOW); 
     delayMicroseconds(100);
   }
-  delay(1000);    
+  delay(1000);
+      
 }
 
 
 void Home_pos()
 {
   if(digitalRead(sensor_pin))
-  {
-    digitalWrite(EnMotorsPin,LOW);
-    digitalWrite(dirPin,LOW);   //clk wise
-    for(int x = 0; x < 6000; x++)
-    {
-      digitalWrite(stepPin,HIGH); 
-      delayMicroseconds(100); 
-      digitalWrite(stepPin,LOW); 
-      delayMicroseconds(100); 
-    }
-    delay(1000);
-    digitalWrite(dirPin,HIGH);   //anti_clk wise
-    for(int x = 0; x < 12000; x++)
-    {
-      if(digitalRead(sensor_pin))
-      {
-        digitalWrite(EnMotorsPin,HIGH);
-      }
-      digitalWrite(stepPin,HIGH); 
-      delayMicroseconds(100); 
-      digitalWrite(stepPin,LOW); 
-      delayMicroseconds(100);
-    }
-    delay(1000);
-  }
-  else
-  {
-    set_angle();   
-  }
+{
   digitalWrite(EnMotorsPin,LOW);
+  digitalWrite(dirPin,LOW);   //clk wise
+  for(int x = 0; x < 6000; x++) {
+    digitalWrite(stepPin,HIGH); 
+    delayMicroseconds(100); 
+    digitalWrite(stepPin,LOW); 
+    delayMicroseconds(100); 
+  }
+  delay(1000);
+  digitalWrite(dirPin,HIGH);   //anti_clk wise
+  for(int x = 0; x < 12000; x++) {
+    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
+    digitalWrite(stepPin,HIGH); 
+    delayMicroseconds(100); 
+    digitalWrite(stepPin,LOW); 
+    delayMicroseconds(100);
+  }
+  delay(1000);
+}
+else
+{
+  set_angle();
+ 
+}
+digitalWrite(EnMotorsPin,LOW);
+
 }
 
-#endif //SCMS_CORNER_BEACON_NRF52840_H
+#endif //SCMS_CONER_BEACON_NRF52840_H

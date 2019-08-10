@@ -13,27 +13,9 @@
 
 #define READ_BUFSIZE                    (20)
 
-#define FrontSM '1'
-#define RearSM '2'
-#define SmRotation 'M'
-#define GetDegrees 'G'
-#define Version 'V'
 
-#define CW 1
-#define ACW 0
-#define SPD 222.222     //steps per one degree rotation of stepper motor
 // ************* Functions decalarion here *************************
 
-void SetupMotor(); // Setup Stepper Motor
-void StepMotor();  // Stepper Motor functions
-
-/*
-int SetFrontBeaconLaser();
-int set_angleFront();
-*/
-
-
- 
 uint8_t readPacket (uint16_t timeout);
 float   parsefloat (uint8_t *buffer);
 char packetbuffer[READ_BUFSIZE+1];
@@ -41,31 +23,13 @@ String packetbuf;
 char charBuf[25];
 
 // ************ Variables used ***************************
-
-String ver = "Laser Beacon FW Ver 1.0";
-//Serial.println(ver);
-
-const byte SmFEn=9;
-const byte SmFPulse=11;
-const byte SmFDir=10;
-const byte SmFHD=3;
-
-const byte SmBEn=5;
-const byte SmBPulse=7;
-const byte SmBDir=6;
-const byte SmBHD=4;
-
 double wheelSteps=0;
-long temp1F=0,temp1B=0;
-long steps;
-long temp2F=0,temp2B=0 ;
-
 int32_t fsm_curr_pos=0;
 int32_t rsm_curr_pos=0;
-
-int pulsew=1; // milliseconds
-int delaypluse=1; // delay between pulses
 int i,j,k;
+
+//long temp1F=0,temp1B=0;
+//long steps;
 //int Status=0;
 
 SoftwareSerial chassisBeacon(12,8);
@@ -77,8 +41,8 @@ void setup(void)
   SetupFrontMotor();
   SetupBackMotor(); // Setup Stepper Motor
   Serial.println("Chassis Laser and Motor Testing !!!"); 
-  SetFrontBeaconLaser(); 
-  SetBackBeaconLaser();
+  HomePosition();
+
   //Status=1;
   //chassisBeacon.write(Status);
 }
@@ -152,11 +116,11 @@ void ReadData(void)
       Serial.print(packetbuffer[z]);
     }
     // printHex(packetbuffer, len);           // for debug
-    if (packetbuffer[2] == Version)   // Version
+    if (packetbuffer[2] == VERSION)   // Version
     {
         DispVer();
     }
-    if(packetbuffer[2] == SmRotation)   // StepperMotor Control
+    if(packetbuffer[2] == SMR)   // StepperMotor Rotation Control
     {
       
       dir = packetbuffer[4]-0x30;
@@ -165,11 +129,11 @@ void ReadData(void)
       //chassisBeacon.println("FrontMotor");
       Serial.print("Mode: ");Serial.println(dir);
       Serial.print("Degree: ");Serial.println(new_angle);
-      if(packetbuffer[1] == FrontSM)
+      if(packetbuffer[1] == FSM)
       {
         FrontMotor(dir,new_angle);
       }
-      if(packetbuffer[1] == RearSM)
+      if(packetbuffer[1] == RSM)
       {
         BackMotor(dir,new_angle);
       }
@@ -224,57 +188,22 @@ float parsefloat(uint8_t *buffer)
 uint8_t CrossCheckFront()
 {
   digitalWrite(SmFEn,LOW);
-    digitalWrite(SmFDir,LOW);   //clk wise
-    for(int x = 0; x < 6000; x++) {
-      digitalWrite(SmFPulse,HIGH); 
-      delayMicroseconds(100); 
-      digitalWrite(SmFPulse,LOW); 
-      delayMicroseconds(100); 
-    }
-    delay(1000);
-    digitalWrite(SmFDir,HIGH);   //anti_clk wise
-    for(int x = 0; x < 12000; x++) {
-      if(digitalRead(SmFHD))
-      {
-        digitalWrite(SmFEn,HIGH);
-        
-      }
-      digitalWrite(SmFPulse,HIGH); 
-      delayMicroseconds(100); 
-      digitalWrite(SmFPulse,LOW); 
-      delayMicroseconds(100);
-    }
-    delay(10);//delay(1000);
-}
-
-//Set the Front Beacon position to Zero position
-uint8_t set_angleFront()
-{
-  digitalWrite(SmFEn,LOW);
-  digitalWrite(SmFDir,LOW);
-  for(long x = 0; x < 40000; x++) 
+  digitalWrite(SmFDir,LOW);   //clk wise
+  for(int x = 0; x < SCP_10D; x++) 
   {
-    if(digitalRead(SmFHD))
-    {
-      digitalWrite(SmFEn,HIGH);
-     
-      //Serial.println("set zero angle is done");
-    }
     digitalWrite(SmFPulse,HIGH); 
     delayMicroseconds(100); 
     digitalWrite(SmFPulse,LOW); 
     delayMicroseconds(100); 
-    //Serial.println("laser.....");
-    //bleuart.println("beta bulls");  
   }
   delay(1000);
-  digitalWrite(SmFDir,HIGH);
-  for(long x = 0; x < 80000; x++) {
+  digitalWrite(SmFDir,HIGH);   //anti_clk wise
+  for(int x = 0; x < SCP_20D; x++) 
+  {
     if(digitalRead(SmFHD))
     {
       digitalWrite(SmFEn,HIGH);
       
-      //Serial.println("set zero angle is done");
     }
     digitalWrite(SmFPulse,HIGH); 
     delayMicroseconds(100); 
@@ -282,25 +211,71 @@ uint8_t set_angleFront()
     delayMicroseconds(100);
   }
   delay(10);//delay(1000);
-      
 }
 
-//Intially set the Front Beacon position to Zero(0th position)
-uint8_t SetFrontBeaconLaser()
+//Set the Front Beacon position to Zero position
+uint8_t set_angleFront()
 {
+  digitalWrite(SmFEn,LOW);
+  digitalWrite(SmFDir,LOW);
+  long x;uint8_t return_front_startP = 1;
   if(digitalRead(SmFHD))
   {
     CrossCheckFront();
+    return_front_startP = 0;
     //Serial.println("Fzero angle is done");
-    chassisBeacon.println("Fzero angle is done.");
+    //chassisBeacon.println("Fzero angle is done.");
   }
   else
   {
-    set_angleFront();
-    //Serial.println("Fzero angle is done");
-    chassisBeacon.println("Fzero angle is done.");
-   
+    for(x = 0; x < SCP_180D; x++) 
+    {
+      if(digitalRead(SmFHD))
+      {
+        digitalWrite(SmFEn,HIGH);
+        return_front_startP = 0;
+        break;
+        //Serial.println("set zero angle is done");
+      }
+      digitalWrite(SmFPulse,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(SmFPulse,LOW); 
+      delayMicroseconds(100); 
+      //Serial.println("laser.....");
+      //bleuart.println("beta bulls");  
+    }
+    delay(1000);
+    digitalWrite(SmFDir,HIGH);
+    for(x = 0; x < SCP_360D; x++)
+    {
+      if(digitalRead(SmFHD))
+      {
+        digitalWrite(SmFEn,HIGH);
+        return_front_startP = 0;
+        break;
+        //Serial.println("set zero angle is done");
+      }
+      digitalWrite(SmFPulse,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(SmFPulse,LOW); 
+      delayMicroseconds(100);
+    }
+    delay(100);
+    if(return_front_startP)
+    {
+      digitalWrite(SmFDir,LOW);
+      for(x; x > SCP_180D; x--)
+      {
+        digitalWrite(SmFPulse,HIGH); 
+        delayMicroseconds(100); 
+        digitalWrite(SmFPulse,LOW); 
+        delayMicroseconds(100);
+      }
+    }
+    delay(10);//delay(1000);
   }
+  
+      
 }
 
 // crosscheck the Back beacon position
@@ -308,7 +283,7 @@ uint8_t CrossCheckBack()
 {
   digitalWrite(SmBEn,LOW);
     digitalWrite(SmBDir,LOW);   //clk wise
-    for(int x = 0; x < 6000; x++) {
+    for(int x = 0; x < SCP_10D; x++) {
       digitalWrite(SmBPulse,HIGH); 
       delayMicroseconds(100); 
       digitalWrite(SmBPulse,LOW); 
@@ -316,7 +291,7 @@ uint8_t CrossCheckBack()
     }
     delay(1000);
     digitalWrite(SmBDir,HIGH);   //anti_clk wise
-    for(int x = 0; x < 12000; x++) {
+    for(int x = 0; x < SCP_20D; x++) {
       if(digitalRead(SmBHD))
       {
         digitalWrite(SmBEn,HIGH);
@@ -335,54 +310,70 @@ uint8_t set_angleBack()
 {
   digitalWrite(SmBEn,LOW);
   digitalWrite(SmBDir,LOW);
-  for(long x = 0; x < 40000; x++) {
-    if(digitalRead(SmBHD))
-    {
-      digitalWrite(SmBEn,HIGH);
-     
-      //Serial.println("Fzero angle is done");
-    }
-    digitalWrite(SmBPulse,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(SmBPulse,LOW); 
-    delayMicroseconds(100); 
-    //Serial.println("laser.....");
-    //bleuart.println("beta bulls");  
-  }
-  delay(1000);
-  digitalWrite(SmBDir,HIGH);
-  for(long x = 0; x < 80000; x++) {
-    if(digitalRead(SmBHD))
-    {
-      digitalWrite(SmBEn,HIGH);
-      
-      //Serial.println("set zero angle is done");
-    }
-    digitalWrite(SmBPulse,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(SmBPulse,LOW); 
-    delayMicroseconds(100);
-  }
-  delay(10);
-      
-}
-
-//Intially set the Back Beacon position to Zero(0th position)
-uint8_t SetBackBeaconLaser()
-{
+  long x;uint8_t return_back_startP = 1;
   if(digitalRead(SmBHD))
   {
     CrossCheckBack();
+    return_back_startP = 0;
     //Serial.println("Rzero angle is done");
-    chassisBeacon.println("Rzero angle is done.");
+    //chassisBeacon.println("Rzero angle is done.");
   }
   else
   {
-    set_angleBack();
-    //Serial.println("Rzero angle is done");
-    chassisBeacon.println("Rzero angle is done.");
-   
+    for(x = 0; x < SCP_180D; x++) {
+      if(digitalRead(SmBHD))
+      {
+        digitalWrite(SmBEn,HIGH);
+        return_back_startP = 0;
+        break;
+        //Serial.println("Fzero angle is done");
+      }
+      digitalWrite(SmBPulse,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(SmBPulse,LOW); 
+      delayMicroseconds(100); 
+      //Serial.println("laser.....");
+      //bleuart.println("beta bulls");  
+    }
+    delay(1000);
+    digitalWrite(SmBDir,HIGH);
+    for(x = 0; x < SCP_360D; x++) 
+    {
+      if(digitalRead(SmBHD))
+      {
+        digitalWrite(SmBEn,HIGH);
+        return_back_startP = 0;
+        break;
+        //Serial.println("set zero angle is done");
+      }
+      digitalWrite(SmBPulse,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(SmBPulse,LOW); 
+      delayMicroseconds(100);
+    }
+    delay(100);
+    if(return_back_startP)
+    {
+      digitalWrite(SmBDir,LOW);
+      for(x; x > SCP_180D; x--)
+      {
+        digitalWrite(SmBPulse,HIGH); 
+        delayMicroseconds(100); 
+        digitalWrite(SmBPulse,LOW); 
+        delayMicroseconds(100);
+      }
+    }
+    delay(10);
   }
+      
+}
+
+uint32_t HomePosition()
+{
+  set_angleFront();
+  chassisBeacon.println("Fzero angle is done.");
+  set_angleBack();
+  chassisBeacon.println("Rzero angle is done.");
 }
 
 void FrontMotor(bool dir,int32_t new_pos) // format is !1M,X,YYYY, X = Direction (0,1, if 2, Enable/Disable), YYYY is number of steps
