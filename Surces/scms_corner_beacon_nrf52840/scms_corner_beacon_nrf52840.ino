@@ -1,133 +1,141 @@
+/*********************************************************************
+ This is a software for Laser Becaon Module
+ Written by Dr Azam, Date : 21st June 2019
+ 
+*********************************************************************/
 #include <bluefruit.h>
 #include <string.h>
 #include <Arduino.h>
+#include <SoftwareSerial.h>
+#include "scms_corner_beacon_nrf52840.h"
 
-BLEUart bleuart;
-
-char m;
-uint32_t wheelSteps=0;
-
-long temp1=0;
-long steps;
-long temp2=0 ;
-
-
-
-long current_pos=0;
-//long new_pos;
-
-
-
-
-
-
-#define  led1 7
-#define  dirPin 29
-#define  stepPin 28
-#define sensor_pin 5
-
-
-#define EnMotorsPin 30
 
 #define READ_BUFSIZE                    (20)
 
-void Home_pos();
-void rotate_sm(bool dir, int32_t new_pos);
+// Uart over BLE service
+BLEUart bleuart;
 
-uint8_t readPacket1 (BLEUart *ble_uart, uint16_t timeout);
-uint8_t readPacket2 (uint8_t *serial_uart, uint16_t timeout);
+// ************* Functions decalarion here *************************
+
+void SelfTest();  // Self Test
+void SetupLaser(); // Setup Laser
+void SetupMotor(); // Setup Stepper Motor
+void SetupBlue(); // Setup Blutooth
+
+void StartAdv();  // Start Adv
+void DispVer();   // Display Version
+void DispOneshot(); // Display Oneshot measurement
+void DispStatus(); // Display Status
+void LaserON();   //Turn ON Laser
+void LaserOFF();  // Turn OFF Laser
+void LaserControl();  // Laser Control
+void LaserEnable(); // Laser module Enable/Disbale 
+void StepMotor();  // Stepper Motor functions
+ 
+uint8_t readPacket (BLEUart *ble_uart, uint16_t timeout);
 float   parsefloat (uint8_t *buffer);
-char packetbuffer[READ_BUFSIZE + 1];
+char packetbuffer[READ_BUFSIZE+1];
 
-String ver =   "Mecanum FW Ver 1.0";
+// ************ Variables used ***************************
+
+String ver = "Laser Beacon FW Ver 1.0";
+//Serial.println(ver);
+
+extern char packetbuffer[];   // Packet buffer
 
 
-uint8_t set_angle();
-//uint8_t set_corner();
-//uint8_t motor_beacon();
 
-void setup(void)
+bool mode;
+int32_t n_time;
+bool s_button;
+
+
+const byte EN_LASER =4;
+const byte SmDir=22;
+const byte SmPulse=21;
+const byte SmEn=20;
+const byte s1=19;
+const byte s2=20;
+const byte s3=21;
+const byte en=22;
+
+int pulsew=1; // milliseconds
+int delaypluse=1; // delay between pulses
+
+const unsigned char OneShotFast[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x02,0x23};
+const unsigned char OneShotSlow[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x01,0x22};
+const unsigned char OneShotAuto[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x00,0x21};
+const unsigned char ReadStatus[] = {0xAA,0x80,0x00,0x00,0x80};
+const unsigned char LaserONdata[] = {0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x01,0xC1};
+const unsigned char LaserOFFdata[] ={0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x00,0xC0};
+
+unsigned char MeasResult[]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+
+int i,j,k;
+int Distance = 0,summ=0;
+uint16_t replyidx = 0;
+//SoftwareSerial portOne(15,17);
+
+// ************* Setup functions *************************
+void setup(void)   
 {
-  SelfTest();  // call self test routine
-  SetupSerial(); // Setup PC Serial Port for Testing
-  SetupSerial1(); // Rx/Tx pins of controller
-  SetupBlue(); // setup Bluetooth
+  //pinMode(s1,OUTPUT);
+  //pinMode(s2,OUTPUT);
+  //pinMode(s3,OUTPUT);
+  //pinMode(en,OUTPUT);
+  SetupLaser();  // Setup Laser
+  SetupMotor(); // Setup Stepper Motor
+  SetupBlue(); // setup Bluetooth 
   StartAdv(); // Set up and start advertising
-  //SetupMecanum(); //Setup mecanum 
- // while ( !Serial ) delay(10);   // for nrf52840 with native usb for testing
-  Serial.println("Mecanum Robot Testing !!!");
-  Serial1.println("Mecanum Robot Testing !!!");
-  pinMode(stepPin,OUTPUT);
-  pinMode(dirPin,OUTPUT);
-  pinMode(EnMotorsPin,OUTPUT);
-  pinMode(sensor_pin,INPUT);
-  digitalWrite(EnMotorsPin,LOW);
-  digitalWrite(dirPin,LOW);
+  SelfTest();  // call self test routine
+ //if(portOne)
+   // portOne.begin(9600);
+ //else
+ // Serial.println("portOne ERROR: ");
+  
+  //digitalWrite(s1,LOW);
+  //digitalWrite(s2,HIGH);
+ // digitalWrite(s3,LOW);
+  //digitalWrite(en,LOW);
 
-//attachInterrupt(sensor_pin,set_angle,RISING);
-
-
-     Home_pos();
-
-
-
+  Home_pos();
 }
 
 // ************ Loop Function ***************************
 
 void loop(void)
 {
-  ReadData();
-  //RunMotors();
-}
-
-
-void SetupSerial()
-{ 
-  Serial.begin(9600);       // PC Serial Termial
-  delay(1000);
-}
-
-void SetupSerial1()
-{ 
-  Serial1.begin(9600);       // Rx/Tx pins of controllers
-  delay(1000);
-  Serial1.println("Mecanum Robot Testing !!!");
-}
-
-void ReadData()
-{
-
-  
-  bool dir;
-  int32_t new_pos;
-if(bleuart.available()||Serial1.available())
- {
-  if(bleuart.available())
-  {
-  uint8_t len = readPacket1(&bleuart, 100);  // Wait for new data arrive
+  uint8_t len = readPacket(&bleuart, 500);  // Wait for new data arrive
   if (len == 0) return;
-  }
-  if(Serial1.available())
-  {
-  uint8_t len = readPacket2(100);  // Wait for new data arrive
-  
-  if (len == 0) return; 
-  }
-  for(int i=0;i<20;i++)
-  {
-    Serial.print(packetbuffer[i]);
-    Serial.print(" ");
-  }
-    
-
-
-  Serial.println(packetbuffer[0]);
-  Serial.println(packetbuffer[1]);
-  
+  //SendToOnChassisBeaconF();
+//#if 1
+  // printHex(packetbuffer, len);           // for debug
   if (packetbuffer[1] == 'V')   // Version
       DispVer();
-  if (packetbuffer[1] == 'M')   // Motors Accelerated movement to position
+  if (packetbuffer[1] == 'O')   // One shot Measurment Comamnd
+  {
+      mode = packetbuffer[2]-0x30;
+      sscanf(&packetbuffer[3],"%d",&n_time);
+      bleuart.print(n_time);
+      Serial.print("n_time: ");
+      Serial.println(n_time,DEC);
+      //new_pos=90;
+      DispOneshot(mode,n_time);
+  }
+      
+  if (packetbuffer[1] == 'S')   // Status
+      set_angle();
+  if (packetbuffer[1] == 'L')   // Laser Control
+  {
+    s_button = packetbuffer[2]-0x30;
+    LaserControl(s_button);
+  }
+      
+  if (packetbuffer[1] == 'E')   // Laser Module Enable/Disable
+      LaserEnable(); 
+  if (packetbuffer[1] == 'M')   // StepperMotor Control
+  {
       dir = packetbuffer[2]-0x30;
       sscanf(&packetbuffer[3],"%d",&new_pos);
       bleuart.print(new_pos);
@@ -135,28 +143,50 @@ if(bleuart.available()||Serial1.available())
       Serial.println(new_pos,DEC);
       //new_pos=90;
       rotate_sm(dir,new_pos);
-      
-  //if (packetbuffer[1] == 'E')   // Motors Enable/Disable  E0=Enable E1 is disable
-      //enable_m();  
-  if (packetbuffer[1] == 'A')   // Sets maxspeed
-      led_1();  
-  if (packetbuffer[1] == 'S')   // Sets Acceleration
-      set_angle();  
-  //if (packetbuffer[1] == 'H')   // Displays help on Commands
-     // ComHelp();  
-  //if (packetbuffer[1] == 'X')   // at corner Stop
-     // set_corner();                
-   //Serial.println("beacon.....");
- }
+  }
+//#endif              
+}
+/*
+uint8_t SendToOnChassisBeaconF()
+{
+  for(int i=0; i<replyidx;i++)
+  {
+    Serial.print(packetbuffer[i]);
+    portOne.write(packetbuffer[i]);
+  }
+}*/
+// ******************** Sub routunes start heare **********************
+void SetupLaser()  // Setup Laser
+{
+  pinMode(EN_LASER, OUTPUT); // Turn Laser Module ON
+  digitalWrite(EN_LASER, HIGH); 
+  delay(500);
+  // Open serial communications and wait for port to open:
+  Serial.begin(19200);
+ // while ( !Serial ) delay(10);   // for nrf52840 with native usb
+  Serial.println("Laser Beacon Distance Measurement!");
+  // set the data rate for the SoftwareSerial port
+  Serial1.begin(19200);
+  Serial1.write(0x55); // Autobaud laser device
+  delay(100);      
 }
 
+void SetupMotor() // Setup Stepper Motor
+{
+   pinMode(stepPin,OUTPUT);
+  pinMode(dirPin,OUTPUT);
+  pinMode(EnMotorsPin,OUTPUT);
+  pinMode(sensor_pin,INPUT);
+  digitalWrite(EnMotorsPin,LOW);
+  digitalWrite(dirPin,LOW);
 
+}
 
 void SetupBlue()
 {
   Bluefruit.begin();
   Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
-  Bluefruit.setName("Vgroup beacon");  // Name of the Bluetooth
+  Bluefruit.setName("VGS_LASER");  // Name of the Bluetooth Laser Beacon 1
   bleuart.begin(); // Configure and start the BLE Uart service
 }
 
@@ -170,30 +200,40 @@ void StartAdv(void)
   Bluefruit.Advertising.restartOnDisconnect(true);
   Bluefruit.Advertising.setInterval(32, 244);    // in unit of 0.625 ms
   Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
-  Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds
+  Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds  
 }
 
 void SelfTest()
 {
-pinMode(EnMotorsPin, OUTPUT);
-//digitalWrite(EnMotorsPin, LOW);        // Enable = HIGH/ Disable LOW
+  DispStatus();
+  delay(1000);
+  LaserON();      // Turn Laser ON
+  delay(1000);    // Delay
+  LaserOFF();     // Turn Laser OFF
 }
 
 void DispVer()
-{
- bleuart.println(ver);
+{  
+  int i=0;
+    Serial.println(ver);
+    for(i=0;i<2;i++)
+    {
+      Serial.write(packetbuffer[i]);
+    }
+    bleuart.println(ver);
 }
 
+ 
 /**************************Read Packet from Mobile Device ************/
-uint8_t readPacket1(BLEUart *ble_uart, uint16_t timeout)
+uint8_t readPacket(BLEUart *ble_uart, uint16_t timeout) 
 {
-  uint16_t origtimeout = timeout, replyidx = 0;
+  uint16_t origtimeout = timeout;
+  replyidx = 0;
   memset(packetbuffer, 0, READ_BUFSIZE);
-  
-  while (timeout--)
+  while (timeout--) 
   {
     if (replyidx >= 20) break;
-    while (ble_uart->available())
+    while (ble_uart->available()) 
     {
       char c =  ble_uart->read();
       if (c == '!') {
@@ -207,374 +247,134 @@ uint8_t readPacket1(BLEUart *ble_uart, uint16_t timeout)
     delay(1);
   }
   packetbuffer[replyidx] = 0;  // null term
-  //Serial.println(packetbuffer[replyidx]);
-  if (!replyidx)  // no data or timeout
+  if (!replyidx)  // no data or timeout 
     return 0;
   if (packetbuffer[0] != '!')  // doesn't start with '!' packet beginning
     return 0;
-  return replyidx;
+ return replyidx;
 }
 
 
-/**************************Read Packet from Serial Port Device ************/
-uint8_t readPacket2(uint16_t timeout)
-{
-  uint16_t origtimeout = timeout, replyidx = 0;
-  memset(packetbuffer, 0, READ_BUFSIZE);
-  while (timeout--)
-  {
-    if (replyidx >= 20) break;
-    while (Serial1.available())
-    {
-      char c =  Serial1.read();
-      if (c == '!') {
-        replyidx = 0;
-      }
-      packetbuffer[replyidx] = c;
-      replyidx++;
-      timeout = origtimeout;
-    }
-    if (timeout == 0) break;
-    delay(1);
-  }
-  packetbuffer[replyidx] = 0;  // null term
-  if (!replyidx)  // no data or timeout
-    return 0;
-  if (packetbuffer[0] != '!')  // doesn't start with '!' packet beginning
-    return 0;
-  return replyidx;
-}
-
-float parsefloat(uint8_t *buffer)
+float parsefloat(uint8_t *buffer) 
 {
   float f;
   memcpy(&f, buffer, 4);
   return f;
 }
 
-
-
-
-
-
-//#define sensor_pin 20
-
-
-
-uint8_t led_1()
-{
-  digitalWrite(led1,HIGH);
-  bleuart.println("hhhh");
-  delay(1000);
-  digitalWrite(led1,LOW);
+// ******************* One Shot Measurement ********************
+void DispOneshot(bool mode, int32_t n_time)
+{ 
   
-  
-}
-
-#define CW 1
-#define ACW 0
-#define SPD 222.222     //steps per one degree rotation of stepper motor
-
-void rotate_sm(bool dir, int32_t new_pos)  //new_pos in degree
-{
-  int32_t net_angle=0;
-  if(new_pos>90)
-  {
-    new_pos = 90;
-  }
-  
-  if(dir==ACW)
-  {
-    new_pos = -new_pos;
-    
-  }
-  net_angle= new_pos -current_pos;
-  current_pos=new_pos;
-  Serial.print("current pos: ");Serial.print(current_pos);
-  if(net_angle<0)
-  {
-    digitalWrite(dirPin,LOW);      //
-    net_angle = -net_angle;
-    Serial.print("dir pin :LOW");
-  }
-  else
-  {
-    digitalWrite(dirPin,HIGH);
-    Serial.print("dir pin :HIGH");
-
-  }
-  if(net_angle > 90)
-  {
-    net_angle=180;
-  }
-  wheelSteps=net_angle*SPD;
-  
-  
-  delay(500);
-  for(long steps = 0; steps < wheelSteps; steps++){
-       
-         digitalWrite(stepPin,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(stepPin,LOW); 
-         delayMicroseconds(100);
-   }
-  
-  
-
-
-  
- /*  int net_angle;
-  if(dir=ACW)
-  {
-    net_angle =new_pos-current_pos;
-    
-    if(net_angle<0)
+  //n_time =(packetbuffer[3]-48)*10+(packetbuffer[4]-48);
+  for(k=0;k < n_time;k++)
+  { 
+    int timeout=5000;  
+    while(Serial1.available()) 
     {
-      net_angle=-net_angle;
-      digitalWrite(dirPin,LOW);
-      current_pos=new_pos;
-    }
-    else
-    {
-      digitalWrite(dirPin,HIGH);
-      current_pos=new_pos;
-    }
-    wheelSteps=net_angle*222.222;
-  }
-  if(dir==0)
-  {
-    new_pos=-new_pos;
-    net_angle =new_pos+current_pos;
-    if(net_angle<0)
-    {
-      net_angle=-net_angle;
-      digitalWrite(dirPin,HIGH);
-      current_pos=new_pos;
-    }
-    else
-    {
-      digitalWrite(dirPin,LOW);
-      current_pos=new_pos;
-    }
-    wheelSteps=net_angle*222.222;
-  }
-   for(long steps = 0; steps < wheelSteps; steps++){
-                 
-                   
-         digitalWrite(stepPin,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(stepPin,LOW); 
-         delayMicroseconds(100);
-   }
-*/
-  
-}
-
-
-/*
-
-uint8_t motor_beacon()
-{
-  digitalWrite(EnMotorsPin,LOW);
-  Serial.print("wheel:");
-  m=(char)packetbuffer[2];
-  
-  //wheelSteps = (packetbuffer[3] - 48) * 100000 + (packetbuffer[4] - 48)*10000 +(packetbuffer[5] - 48)*1000 + 
-               //(packetbuffer[6] - 48)*100 + (packetbuffer[7] - 48)*10 + (packetbuffer[8] - 48); // read the data
- //Serial.println(wheelSteps);
-  wheelSteps = (packetbuffer[3] - 48) * 100 + (packetbuffer[4] - 48)*10 +(packetbuffer[5] - 48);
-  wheelSteps = (wheelSteps*222.222);
-  Serial.println(wheelSteps);
-
-  if(m=='C') 
-  {
-    digitalWrite(dirPin,LOW);// clock wise direction
-              if(temp2>0)
-                    {
-                      
-        
-                                    for(long steps = temp2;steps > 0;steps--){
-                                      temp2--;
-                                      digitalWrite(stepPin,HIGH);  
-                                      delayMicroseconds(100); 
-                                      digitalWrite(stepPin,LOW); 
-                                      delayMicroseconds(100);         
-
-                                 }   
-                                    //if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH); 
-                                    for(long steps = 0; steps < wheelSteps; steps++){
-                                    
-                                    Serial.println(temp1);
-                                    if(temp1 > 40000){
-                                      digitalWrite(EnMotorsPin,HIGH);           
-                                      break;           
-                                    }
-                                    temp1++;
-                                         digitalWrite(stepPin,HIGH); 
-                                         delayMicroseconds(100); 
-                                         digitalWrite(stepPin,LOW); 
-                                         delayMicroseconds(100);
-                                                  
-
-                                 }
-      
-                   }
-                   else
-                             {
-                                       // if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH);       
-                                        for(long steps = 0; steps < wheelSteps; steps++){
-                                          
-                                         
-                                        
-                                           if(temp1 > 40000)
-                                           {
-                                            digitalWrite(EnMotorsPin,HIGH);
-                                            break;
-                                           }
-                                           temp1++;
-                                            Serial.println(temp1);                 
-                                             digitalWrite(stepPin,HIGH); 
-                                             delayMicroseconds(100); 
-                                             digitalWrite(stepPin,LOW); 
-                                             delayMicroseconds(100);
-                                                      
-
-                                        }
-   
-                }
-                   
- 
-            
-
- 
-        }
-  if(m=='A')
-  {
-    digitalWrite(dirPin,HIGH);  
-  
-    if(temp1>0)
-          {
-      
-                          for(long steps = temp1;steps > 0;steps--){
-                            temp1--;
-                           digitalWrite(stepPin,HIGH); 
-                           delayMicroseconds(100); 
-                           digitalWrite(stepPin,LOW); 
-                           delayMicroseconds(100);         
-
-                          }
-                          for(long steps = 0; steps < wheelSteps; steps++){
-                              Serial.println(temp2);
-                              if(temp2 > 40000) {
-                                digitalWrite(EnMotorsPin,HIGH);  
-                                break;     
-                              }
-                               temp2++;
-                                   digitalWrite(stepPin,HIGH); 
-                                   delayMicroseconds(100); 
-                                   digitalWrite(stepPin,LOW); 
-                                   delayMicroseconds(100);         
-                                   }      
+      i=Serial1.read();
+    }  // clear Buffer
     
+    if (mode == 1)
+    {
+      for (i=0;i<9;i++)
+      Serial1.write(OneShotFast[i]);
+    }
+    if (mode == 2)
+    {
+      for (i=0;i<9;i++)
+      Serial1.write(OneShotSlow[i]);
+    }
+    if (mode == 3)
+    {
+      for (i=0;i<9;i++)
+      Serial1.write(OneShotAuto[i]);
+    }   
     
-     }
-     else
+    while(timeout-- && !Serial1.available())
+    {
+      if (timeout==0)break;
+      delay(1);
+    }
+    delay(100);
+    if(Serial1.available())
      {
-                                for(long steps = 0; steps < wheelSteps; steps++){
-                                  
-                                  
-                                  if(temp2 > 40000) {
-                                    digitalWrite(EnMotorsPin,HIGH);
-                                    break;
-                                  }
-                                  temp2++;
-                                  Serial.println(temp2);       
-                                       digitalWrite(stepPin,HIGH); 
-                                       delayMicroseconds(100); 
-                                       digitalWrite(stepPin,LOW); 
-                                       delayMicroseconds(100);
-                                         
-                                      }
-                
-    }
+      for (i=0;i<13;i++)
+         {
+          if(Serial1.available())
+          MeasResult[i]=Serial1.read();
+         }
+     Distance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
+     Serial.println(Distance);
+     summ += Distance;
+     
+     
+     }
+    
+     
+     
+ 
  }
-
-} */
-uint8_t set_angle()
-{
-  digitalWrite(EnMotorsPin,LOW);
-  digitalWrite(dirPin,LOW);
-  for(int x = 0; x < 40000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);   
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100); 
-    //Serial.println("laser.....");
-    //bleuart.println("beta bulls");  
-  }
-  delay(1000);
-  digitalWrite(dirPin,HIGH);
-  for(int x = 0; x < 80000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100);
-  }
-  delay(1000);
-      
+ summ /= n_time;
+ Serial.print("avg :");
+ Serial.println(summ);
+ bleuart.print("avg:");
+ bleuart.println(summ);
 }
-
-
-void Home_pos()
-{
-  if(digitalRead(sensor_pin))
-{
-  digitalWrite(EnMotorsPin,LOW);
-  digitalWrite(dirPin,LOW);   //clk wise
-  for(int x = 0; x < 6000; x++) {
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100); 
+ // ******************* Display Status ********************
+void DispStatus()
+{  
+  for (i=0;i<5;i++)
+  {
+       Serial1.write(ReadStatus[i]);
   }
-  delay(1000);
-  digitalWrite(dirPin,HIGH);   //anti_clk wise
-  for(int x = 0; x < 12000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100);
-  }
-  delay(1000);
-}
-else
-{
-  set_angle();
+    
+  if(Serial1.available())//  use time out later
+   {
+     for (i=0;i<8;i++)
+      {
+         if (Serial1.available())
+         MeasResult[i]=Serial1.read();
+      }
+         
+     Serial.println(MeasResult[7],HEX);
+     bleuart.println(MeasResult[7],HEX);
+   }
  
 }
-digitalWrite(EnMotorsPin,LOW);
-
+ 
+void LaserControl(bool s_button)
+{ 
+ if (s_button == 1)
+    LaserON();
+ if (s_button == 0)
+    LaserOFF();
 }
 
-/*
-uint8_t set_corner()
-{
-    digitalWrite(EnMotorsPin,LOW);
-    m=(packetbuffer[2] - 48);
-  if(m==1)digitalWrite(dirPin,LOW);
-  if(m==0)digitalWrite(dirPin,HIGH);
-  
-  for(int steps = 0; steps < wheelSteps; steps++){
-          if(temp1>40000) digitalWrite(EnMotorsPin,HIGH);  
-          temp1 =steps;               
-          digitalWrite(stepPin,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(stepPin,LOW); 
-          delayMicroseconds(100);  
-        }
-     
-  
-}*/
+void LaserEnable()
+{ 
+  if (packetbuffer[2] == '1')
+  {
+     digitalWrite(EN_LASER, HIGH); 
+     delay(500);
+     Serial1.write(0x55); // Autobaud laser device
+     delay(1000);
+     SelfTest();    // Self test laser
+  }    
+  if (packetbuffer[2] == '0')
+    digitalWrite(EN_LASER, LOW);   // Disable Laser Module
+}
+ 
+void LaserON()
+{ 
+  for (i=0;i<9;i++)
+  Serial1.write(LaserONdata[i]);
+  delay(1000);
+}
+ 
+void LaserOFF()
+{ 
+  for (i=0;i<9;i++)
+  Serial1.write(LaserOFFdata[i]);
+  delay(1000);
+}
