@@ -40,6 +40,7 @@ String ver =   "Robotic Printer Ver 1.0";
 //Command codes from Mobile/Application
 #define CMD_VER       'V' //Firmware version details
 #define CMD_MVMT      'M' //Movement control
+#define CMD_LOS       'O' //Laser OneShot Measurment 
 
 //Control Target for commands
 #define CT_FSM        '1' //Front Stepper Motor 
@@ -47,6 +48,7 @@ String ver =   "Robotic Printer Ver 1.0";
 #define CT_MWR        '3' //Mecanum Wheel Rotate
 #define CT_FL         '4' //Front Laser
 #define CT_RL         '5' //Rear Laser
+#define CT_CB         '6' //Corner Beacon
 
 
 //1:8 serial port mux selection pins 
@@ -83,4 +85,6 @@ uint8_t MeasResult[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
 
 #define READ_BUFSIZE                    (20)
 
+bool beacon_responce_flag = false;
+char corner_beacon_responce[20+1] = { 0 };
 #endif //SCMS_MASTER_CONTROL_NRF52840_H

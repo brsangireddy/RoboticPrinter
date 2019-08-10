@@ -152,7 +152,7 @@ void ReadData(void)
       Serial.print(packetbuffer[z]);
     }
     // printHex(packetbuffer, len);           // for debug
-    if (packetbuffer[1] == Version)   // Version
+    if (packetbuffer[2] == Version)   // Version
     {
         DispVer();
     }

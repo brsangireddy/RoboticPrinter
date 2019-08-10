@@ -9,9 +9,9 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include "scms_master_control_nrf52840.h"
-
+#include "scms_master_control_bleuart.h"
 // Uart over BLE service
-BLEUart bleuart;
+//BLEUart bleuart;
 
 // ************* Functions decalarion here *************************
 uint8_t readPacket1 (BLEUart *ble_uart, uint16_t timeout);
@@ -28,7 +28,8 @@ void RotateSmFront(uint8_t dir, uint32_t angle); //Front Stepper Motors Rotation
 void LaserControl(uint8_t on_off); //Laser Contoller (ON or OFF)
 uint32_t GetMesurment_FL(uint8_t mode, uint32_t n_times); //Front Laser Distance
 uint32_t GetMesurment_RL(uint8_t mode, uint32_t n_times); //Rear Laser Distance
-
+uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode, uint32_t n_times);
+void RotateCornerBeacon(uint8_t dir, uint32_t angle);
 // ************ Variables used ***************************
 
 //int i, j, k,flag=0;
@@ -133,11 +134,14 @@ void ReadData()
 {
   byte chas_dir,lm_mode;
   bool mot_dir,on_off;
-  int32_t angle,dist_ang,n_times;
-  if(bleuart.available())
+  int32_t angle,dist_ang;
+  uint32_t n_times;
+  
+  if(cmd_packet_received)
   {
-    uint8_t len = readPacket1(&bleuart, 100);  // Wait for new data arrive
-    if (len == 0) return;
+    cmd_packet_received = false;
+   // uint8_t len = readPacket1(&bleuart, 100);  // Wait for new data arrive
+   // if (len == 0) return;
     charToString(packetbuffer,packetbuf);
     
     if (packetbuffer[1] == CMD_VER)   // Version
@@ -199,6 +203,22 @@ void ReadData()
         GetMesurment_RL(lm_mode,n_times);
       }
     }
+    if(packetbuffer[1] == CT_CB)
+    {
+      if(packetbuffer[2] == CMD_LOS)
+      {
+        lm_mode = packetbuffer[4]-0x30;
+        sscanf(&packetbuffer[6],"%d",&n_times);
+        GetDistanceFromCornerBeacon(lm_mode,n_times);
+      }
+      if(packetbuffer[2] == CMD_MVMT)
+      {
+        chas_dir = packetbuffer[4] -0x30;
+        sscanf(&packetbuffer[6],"%d",&angle);
+        RotateCornerBeacon(chas_dir,angle);
+        
+      }
+    }
     
 /*
     if(packetbuffer[1] == CorBeacon)
@@ -250,7 +270,7 @@ void ComHelp()
  bleuart.println("!X : Emergency Stop!!!");
 }
 
-// ********************* Blutooth control routines ***************
+/*// ********************* Blutooth control routines ***************
 void SetupBlue()
 {
   Bluefruit.begin();
@@ -272,6 +292,7 @@ void StartAdv(void)
   Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds
 }
+*/
 
 void SelfTest()
 {
@@ -605,8 +626,13 @@ uint32_t GetMesurment_FL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
       Serial.print("FL Measured ditance: ");Serial.println(FLDistance);
       bleuart.print("FL Distance in mm: ");bleuart.println(FLDistance);
     }
+    FLDistance += FLDistance;
   }
-  return FLDistance;  
+  if(n_times)
+  {
+    FLDistance = FLDistance/n_times;
+  }
+  return FLDistance; 
 }
 
 uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
@@ -670,6 +696,43 @@ uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
       Serial.print("RL Measured ditance: ");Serial.println(RLDistance);
       bleuart.print("RL Distance in mm: ");bleuart.println(RLDistance);
     }
+    RLDistance += RLDistance;
+  }
+  if(n_times)
+  {
+     RLDistance = RLDistance/n_times;
   }
   return RLDistance;  
+}
+
+uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode=LMM_FAST, uint32_t n_times=1)
+{
+  uint32_t beacon_dist;
+  beacon_responce_flag = false;
+  
+  char CmdBuf[20] = {0};
+  CmdBuf[0] = '!';
+  CmdBuf[1] = 'O';
+  CmdBuf[2] = lm_mode+0x30;
+  memcpy(&CmdBuf[3],&n_times,sizeof(n_times));
+  clientUart.write(CmdBuf,20);
+  while(!beacon_responce_flag);
+  sscanf(&corner_beacon_responce[0],"%d",&beacon_dist);
+  Serial.print("Distance received from beacon: ");Serial.println(beacon_dist);
+  return beacon_dist;
+}
+
+void RotateCornerBeacon(uint8_t dir, uint32_t angle)
+{
+  beacon_responce_flag = false;
+  char CmdBuf[20] = {0};
+  CmdBuf[0] = '!';
+  CmdBuf[1] = 'M';
+  CmdBuf[2] = dir+0x30;
+  memcpy(&CmdBuf[3],&angle,sizeof(angle));
+  clientUart.write(CmdBuf,20);
+  while(!beacon_responce_flag);
+  
+  //sscanf(&corner_beacon_responce[0],"%d",&beacon_dist);
+  Serial.print("Corner Beacon set to (Degree): ");Serial.println(angle);
 }
