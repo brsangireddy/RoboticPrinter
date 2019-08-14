@@ -29,9 +29,9 @@ String ver =   "Robotic Printer Ver 1.0";
 #define SM_DIR_ACW        1 //Stepper Motor Anti ClockWise
 
 //Laser measurement modes
-#define LMM_FAST      1 //Laser Measurment Mode Fast
-#define LMM_SLOW      2 //Laser Measurment Mode Slow
-#define LMM_AUTO      3 //Laser Measurment Mode Auto
+#define LMM_FAST      0 //Laser Measurment Mode Fast
+#define LMM_SLOW      1 //Laser Measurment Mode Slow
+#define LMM_AUTO      2 //Laser Measurment Mode Auto
 
 //Laser control
 #define LASER_OFF         0 //Laser OFF
@@ -41,7 +41,8 @@ String ver =   "Robotic Printer Ver 1.0";
 #define CMD_VER       'V' //Firmware version details
 #define CMD_MVMT      'M' //Movement control
 #define CMD_LOS       'O' //Laser OneShot Measurment 
-#define CMD_MWSPEED    'S' //Mecanum Wheel Speed
+#define CMD_MWSPEED   'S' //Mecanum Wheel Speed
+#define CMD_STO       'D' //Start Operation
 //Control Target for commands
 #define CT_FSM        '1' //Front Stepper Motor 
 #define CT_RSM        '2' //Rear Stepper Motor
@@ -50,6 +51,23 @@ String ver =   "Robotic Printer Ver 1.0";
 #define CT_RL         '5' //Rear Laser
 #define CT_CB         '6' //Corner Beacon
 
+//chassis direction constants
+#define CHAS_DIR_CW 0 //ClockWise(Rotate Right)
+#define CHAS_DIR_ACW 1 //Anti ClockWise(Rotate Left)
+#define CHAS_DIR_MLF 2 //Move Left Forward diagonal
+#define CHAS_DIR_MRF 3 //Move Right Forward diagonal
+#define CHAS_DIR_MLB 4 //Move Left Backward diagonal
+#define CHAS_DIR_MRB 5 //Move Right Backward diagonal
+#define CHAS_DIR_SWL 6 //SideWay Left
+#define CHAS_DIR_SWR 7 //SideWay Right
+#define CHAS_DIR_MF 8 //Move Forward
+#define CHAS_DIR_MB 9 //Move Backward
+
+//Center point to stepper motor distance
+#define SP_CH_CENT_DIST  100 //Distance from Stepper to Chassis Center point in mm 
+
+// Laser Cross Mark pin
+const byte lx = 29; //Laser Cross Moark 
 
 //1:8 serial port mux selection pins 
 const byte S1 = 19;     // to UART Mux
@@ -90,4 +108,12 @@ bool beacon_responce_flag = false;
 
 char beacon_names[4][32] = { "LCbb_CBEACON_00","LCbb_CBEACON_01","LCbb_CBEACON_02","LCbb_CBEACON_03" };
 byte cbeacon_sel = 0; //Corner Beacon Selected
+
+#define CW 0 //ClockWise
+#define ACW 1 //Anti ClockWise
+#define SCP_1D    223 // Step Count per 1 Degree rotation
+#define SCP_180D 40000 // Step Count Per 180 Degrees rotation
+#define SCP_360D 80000 // Step Count Per 360 Degrees rotation
+#define SCP_10D  6000 // Step Count Per 10 Degrees rotation
+#define SCP_20D  12000 // Step Count Per 20 Degrees rotation
 #endif //SCMS_MASTER_CONTROL_NRF52840_H

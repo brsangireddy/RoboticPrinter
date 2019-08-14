@@ -31,7 +31,10 @@ uint32_t GetMesurment_FL(uint8_t mode, uint32_t n_times); //Front Laser Distance
 uint32_t GetMesurment_RL(uint8_t mode, uint32_t n_times); //Rear Laser Distance
 uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode, uint32_t n_times);
 void RotateCornerBeacon(uint8_t dir, uint32_t angle);
-
+void ReadResult();
+void charToString(char S[], String &D);
+void DispVer();
+void SetSpeedMoveRobot(uint32_t sped);
 // ************ Variables used ***************************
 
 //int i, j, k,flag=0;
@@ -58,6 +61,9 @@ void setup(void)
   //Serial.begin(19200);
   // while ( !Serial ) delay(10);   // for nrf52840 with native usb for testing
   Serial.println("LCbb_RCONTROL_00 Testing !!!");
+  
+  pinMode(lx,OUTPUT);
+  digitalWrite(lx,HIGH);
   //BeaconDetection();
   /*if(Serial1)
   {
@@ -230,8 +236,8 @@ void ReadData()
         sscanf(&packetbuffer[6],"%d",&n_times);
         Serial.print("CB Laser mode: ");Serial.println(lm_mode);
         Serial.print("CB Laser n_times: ");Serial.println(n_times);
-        int l_dist = GetDistanceFromCornerBeacon(lm_mode,n_times);
-        Serial.print("Returned value: ");Serial.println(l_dist);
+        int cl_dist = GetDistanceFromCornerBeacon(lm_mode,n_times);
+        Serial.print("Returned value: ");Serial.println(cl_dist);
       }
       if(packetbuffer[2] == CMD_MVMT)
       {
@@ -243,7 +249,16 @@ void ReadData()
         //Serial.print("Returned distance: ");Serial.println(cb_dist);
         
       }
+      if(packetbuffer[2] == CMD_STO)
+      {
+        //x_value = packetbuffer[4]-0x30*100+packetbuffer[3]-0x30*10+packetbuffer[2]-0x30;
+        //y_value = packetbuffer[7]-0x30*100+packetbuffer[6]-0x30*10+packetbuffer[5]-0x30;
+        //sscanf(&packetbuffer[8],"%d",&b_det_range)
+        CornerBeaonDetectStart();
+        ChassisStartDetectBeacon();
+      }
     }
+    
     
 /*
     if(packetbuffer[1] == CorBeacon)
@@ -265,8 +280,117 @@ void ReadData()
 
 }
 
+uint32_t ChassisStartDetectBeacon()
+{
+  Serial.println("Start Chassis Detection operation >>> ");
+  RLDistance = 0;
+  bool beacon_found = false;
+  bool dir;//,homeP;
+  //uint32_t angle = 0;
+  dir = CW;
+  while(!beacon_found)
+  {
+    for(long x = 0 ;x<180; x++)
+    {
+      RLDistance = GetMesurment_RL(LMM_FAST,1);
+      if(RLDistance < 500)
+      {
+        //angle = (x*360)/SCP_360D;
+        //homeP = 0;
+        RotateSmRear(dir,0); // go home position
+        Serial.print("chassis CW rotational angle: ");Serial.print(x);
+        
+        MoveRobot(dir,x);
+        Serial.println("Chassis and CornerBea same dir.");
+        beacon_found = true;
+        //return clk_1deg;
+        break;
+      }
+      RotateSmRear(dir,x);
+      //if(x = SCP_1D+ent_ang)
+      //{
+        //ent_ang = x;
+        //angle = (x*360)/SCP_360D;
+        //clk_1deg = clk_1deg +1;
+        
+        //RLDistance = GetMesurment_RL(LMM_FAST,1);
+     // }
 
+    }
+    dir =ACW;
+  }
+  if(beacon_found == false)
+  {
+    bleuart.print("CB not available found");
+  }
+    /*dir = ACW;
+    for(long x = 0 ;x<180; x++)
+    {
+      RLDistance = GetMesurment_RL(LMM_FAST,1);
+      if(RLDistance < 500)
+      {
+        //angle = (x*360)/SCP_360D;
+        //homeP = 0;
+        RotateSmRear(dir,0); // go home position
+        Serial.print("chassis CW rotational angle: ");Serial.print(x);
+        MoveRobot(9,x);
+        Serial.println("Chassis and CornerBea same dir.");
+        //return clk_1deg;
+        break;
+      }
+      //if(x = SCP_1D+ent_ang)
+      //{
+        //ent_ang = x;
+        //angle = (x*360)/SCP_360D;
+        //clk_1deg = clk_1deg +1;
+        RotateSmRear(dir,x);
+        //RLDistance = GetMesurment_RL(LMM_FAST,1);
+     // }
 
+    }
+    
+    //RotateSmRear()
+    //FLDistance = GetMesurment_FL();
+ 
+  //GetMesurment_FL();*/
+  
+}
+uint32_t CornerBeaonDetectStart()
+{
+  beacon_responce_flag = false;
+  char CmdBuf[20];
+  int32_t cb_ang;uint32_t cl_dist;byte cb_dir;
+  CmdBuf[0] = '!';
+  CmdBuf[1] = CMD_STO;
+  for(int s=0;s<2;s++)
+  {
+    Serial.print("Satrt command: ");Serial.print(CmdBuf[s]);
+  }
+  clientUart.write(CmdBuf,20);
+  while(!beacon_responce_flag)
+  {
+    delay(1);
+  }
+  cb_dir = corner_beacon_responce[0]; //Direction is coming in opposite way from becaon
+  memcpy(&cl_dist , &corner_beacon_responce[1], sizeof(cl_dist));
+  memcpy(&cb_ang , &corner_beacon_responce[sizeof(cl_dist)+1] , sizeof(cb_ang));
+  //cb_ang = (corner_beacon_responce[1]-0x30)*100+(corner_beacon_responce[2]-0x30)*10+(corner_beacon_responce[3]-0x30);
+  //cl_dist = (corner_beacon_responce[4]-0x30)*100+(corner_beacon_responce[5]-0x30)*10+(corner_beacon_responce[6]-0x30);
+  //sscanf(&corner_beacon_responce[0],"%d",&cb_ang);
+  Serial.print("Corner Beacon detect direction: ");Serial.println(cb_dir);
+  Serial.print("Corner Beacon detect angle: ");Serial.println(cb_ang);
+  Serial.print("Corner Beacon detect distance: ");Serial.println(cl_dist);
+  /*if(cb_dir) //corner beacon clockwise direction
+  {
+    MoveRobot(CHAS_DIR_MB,SP_CH_CENT_DIST);
+  }
+  else //Corner beacon anti clockwise direction
+  {
+    MoveRobot(CHAS_DIR_MF,SP_CH_CENT_DIST);
+  //return cb_ang;
+  
+  }*/
+}
 
  
 void ReadResult()

@@ -312,7 +312,14 @@ uint8_t  readPacket(uint16_t timeout)
 
 void MecanumMove(uint32_t distance, int chas_dir) // format is !3M,XX,YYYYYYY, XX = Mode of Mecanum Robot, YYYYYYY = Distance in cm
 {
-  wheelSteps = distance*SPMM; //Calculate number steps for wheels to be driven for given distance
+  if((chas_dir == CHAS_DIR_CW) || (chas_dir == CHAS_DIR_ACW))
+  {
+    wheelSteps = distance*SPD;
+  }
+  else
+  {
+    wheelSteps = distance*SPMM; //Calculate number steps for wheels to be driven for given distance
+  }
   Serial.print("Chassis Dir: ");Serial.print(chas_dir);Serial.print(" MecanumMove Distance(mm): ");Serial.print(distance);Serial.print(" Steps: ");Serial.println(wheelSteps);
   S1.print("Mecanum Moving steps: ");S1.println(wheelSteps);
 
@@ -379,38 +386,38 @@ void RotateLeft()
   RightFrontWheel.moveTo(-wheelSteps);
   RightBackWheel.moveTo(-wheelSteps);
 }
-void MoveS1dewaysRight() 
+void MoveSidewaysRight() 
 {
   LeftFrontWheel.moveTo(wheelSteps);
   LeftBackWheel.moveTo(-wheelSteps);
-  RightFrontWheel.moveTo(-wheelSteps);
-  RightBackWheel.moveTo(wheelSteps);
-}
-void MoveS1dewaysLeft() 
-{
-  LeftFrontWheel.moveTo(-wheelSteps);
-  LeftBackWheel.moveTo(wheelSteps);
   RightFrontWheel.moveTo(wheelSteps);
   RightBackWheel.moveTo(-wheelSteps);
 }
-void MoveRightForward() 
+void MoveSidewaysLeft() 
 {
-  LeftFrontWheel.moveTo(wheelSteps);
-  RightBackWheel.moveTo(wheelSteps);
-}
-void MoveRightBackward() 
-{
-  LeftBackWheel.moveTo(-wheelSteps);
+  LeftFrontWheel.moveTo(-wheelSteps);
+  LeftBackWheel.moveTo(wheelSteps);
   RightFrontWheel.moveTo(-wheelSteps);
+  RightBackWheel.moveTo(wheelSteps);
 }
 void MoveLeftForward() 
 {
-  LeftBackWheel.moveTo(wheelSteps);
-  RightFrontWheel.moveTo(wheelSteps);
+  LeftFrontWheel.moveTo(-wheelSteps);
+  RightBackWheel.moveTo(wheelSteps);
 }
 void MoveLeftBackward() 
 {
-  LeftFrontWheel.moveTo(-wheelSteps);
+  LeftBackWheel.moveTo(wheelSteps);
+  RightFrontWheel.moveTo(-wheelSteps);
+}
+void MoveRightForward() 
+{
+  LeftBackWheel.moveTo(-wheelSteps);
+  RightFrontWheel.moveTo(wheelSteps);
+}
+void MoveRightBackward() 
+{
+  LeftFrontWheel.moveTo(wheelSteps);
   RightBackWheel.moveTo(-wheelSteps);
 }
 void MoveForward() 

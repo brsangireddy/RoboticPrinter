@@ -26,10 +26,10 @@ BLEDfu bledfu;
 
 // Peripheral uart service
 BLEUart bleuart;
-
+//BLEUart rpAppUart;
 // Central uart client
 BLEClientUart clientUart;
-
+//BLEClientUart beaconUart;
 extern char packetbuffer[]; 
 extern char corner_beacon_responce[];
 bool cmd_packet_received = false;
@@ -46,14 +46,14 @@ void StartAdv(void);
 void SetupBlue(void)
 {
   Serial.begin(115200);
-  while ( !Serial ) delay(10);   // for nrf52840 with native usb
+  //while ( !Serial ) delay(10);   // for nrf52840 with native usb
 
   Serial.println("Bluefruit52 Dual Role BLEUART Example");
   Serial.println("-------------------------------------\n");
   
   // Initialize Bluefruit with max concurrent connections as Peripheral = 1, Central = 1
   // SRAM usage required by SoftDevice will increase with number of connections
-  Bluefruit.begin(1, 0);
+  Bluefruit.begin(1, 1);
   Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
   Bluefruit.setName("LCbb_RCONTROL_00");
 
@@ -250,11 +250,11 @@ void cent_bleuart_rx_callback(BLEClientUart& cent_uart)
   cent_uart.read(corner_beacon_responce, 20);
       
   Serial.print("[Cent] RX: ");Serial.print(corner_beacon_responce);
-  /*for(int i=0 ; i<20;i++)
+  for(int i=0 ; i<20;i++)
   {
-    Serial.print(corner_beacon_responce[i]);Serial.print(" ");
+    Serial.print(corner_beacon_responce[i],HEX);Serial.print(" ");
   }
-  */
+  
   if ( bleuart.notifyEnabled() )
   {
     //Serial.println("cb resp");
