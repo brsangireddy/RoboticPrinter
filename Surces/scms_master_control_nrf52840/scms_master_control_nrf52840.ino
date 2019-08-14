@@ -1,4 +1,4 @@
- /*********************************************************************
+/*********************************************************************
   This is a software for Mecanum Robot
   Written by Dr Azam, Date : 1st July 2019
 
@@ -14,10 +14,11 @@
 //BLEUart bleuart;
 
 // ************* Functions decalarion here *************************
-uint8_t readPacket1 (BLEUart *ble_uart, uint16_t timeout);
+//uint8_t readPacket1 (BLEUart *ble_uart, uint16_t timeout);
 uint8_t readPacket2 (uint8_t *serial_uart, uint16_t timeout);
 float   parsefloat (uint8_t *buffer);
 char    packetbuffer[READ_BUFSIZE + 1];
+char corner_beacon_responce[20+1] = { 0 };
 String  packetbuf;
 
 
@@ -30,6 +31,7 @@ uint32_t GetMesurment_FL(uint8_t mode, uint32_t n_times); //Front Laser Distance
 uint32_t GetMesurment_RL(uint8_t mode, uint32_t n_times); //Rear Laser Distance
 uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode, uint32_t n_times);
 void RotateCornerBeacon(uint8_t dir, uint32_t angle);
+
 // ************ Variables used ***************************
 
 //int i, j, k,flag=0;
@@ -55,7 +57,7 @@ void setup(void)
   StartAdv(); // Set up and start advertising
   //Serial.begin(19200);
   // while ( !Serial ) delay(10);   // for nrf52840 with native usb for testing
-  Serial.println("Mecanum Robot Testing !!!");
+  Serial.println("LCbb_RCONTROL_00 Testing !!!");
   //BeaconDetection();
   /*if(Serial1)
   {
@@ -134,7 +136,7 @@ void ReadData()
 {
   byte chas_dir,lm_mode;
   bool mot_dir,on_off;
-  int32_t angle,dist_ang;
+  int32_t angle,dist_ang,fl_dist,rl_dist,w_speed;
   uint32_t n_times;
   
   if(cmd_packet_received)
@@ -151,27 +153,39 @@ void ReadData()
     }
     
     //packetbuffer[1] = packetbuffer[1]-0x30;
-    if(packetbuffer[2] == CMD_MVMT)
-    {
-      mot_dir = packetbuffer[4]-0x30;
-      sscanf(&packetbuffer[6],"%d",&angle);
+    //if(packetbuffer[2] == CMD_MVMT)
+    //{
+      //mot_dir = packetbuffer[4]-0x30;
+      //sscanf(&packetbuffer[6],"%d",&angle);
       if(packetbuffer[1] == CT_FSM)
       {
+        mot_dir = packetbuffer[4]-0x30;
+        sscanf(&packetbuffer[6],"%d",&angle);
         RotateSmFront(mot_dir,angle);
       }
       if(packetbuffer[1] == CT_RSM)
       {
-   
+        mot_dir = packetbuffer[4]-0x30;
+        sscanf(&packetbuffer[6],"%d",&angle);
         RotateSmRear(mot_dir,angle);
       }
-    }
+    //}
        
     if(packetbuffer[1] == CT_MWR)
     {
-      chas_dir = packetbuffer[4]-0x30;
-      sscanf(&packetbuffer[6],"%d",&dist_ang);
-      Serial.print("dist_ang: ");Serial.println(dist_ang);
-      MoveRobot(chas_dir,dist_ang);
+      if(packetbuffer[2] == CMD_MWSPEED)
+      {
+        sscanf(&packetbuffer[4],"%d",&w_speed);
+        Serial.print("Mecanum Wheel speed: ");Serial.println(w_speed);
+        SetSpeedMoveRobot(w_speed);
+      }
+      if(packetbuffer[2] == CMD_MVMT)
+      {
+        chas_dir = packetbuffer[4]-0x30;
+        sscanf(&packetbuffer[6],"%d",&dist_ang);
+        Serial.print("dist_ang: ");Serial.println(dist_ang);
+        MoveRobot(chas_dir,dist_ang);
+      }
       
     }
     if(packetbuffer[1] == CT_FL)
@@ -185,7 +199,9 @@ void ReadData()
       }
       else
       {
-        GetMesurment_FL(lm_mode,n_times);
+        fl_dist = GetMesurment_FL(lm_mode,n_times);
+        Serial.print("FL Measured Average distance: ");Serial.println(fl_dist);
+        bleuart.print("FL Average Distance in mm: ");bleuart.println(fl_dist);
       }
         
     }
@@ -197,10 +213,13 @@ void ReadData()
       {
         on_off = packetbuffer[4]-0x30;
         LaserControl(on_off);
+        bleuart.print("Laser on_off :");bleuart.println(on_off);
       }
       else
       {
-        GetMesurment_RL(lm_mode,n_times);
+        rl_dist = GetMesurment_RL(lm_mode,n_times);
+        Serial.print("RL Measured Average distance: ");Serial.println(rl_dist);
+        bleuart.print("RL Average Distance in mm: ");bleuart.println(rl_dist);
       }
     }
     if(packetbuffer[1] == CT_CB)
@@ -209,13 +228,19 @@ void ReadData()
       {
         lm_mode = packetbuffer[4]-0x30;
         sscanf(&packetbuffer[6],"%d",&n_times);
-        GetDistanceFromCornerBeacon(lm_mode,n_times);
+        Serial.print("CB Laser mode: ");Serial.println(lm_mode);
+        Serial.print("CB Laser n_times: ");Serial.println(n_times);
+        int l_dist = GetDistanceFromCornerBeacon(lm_mode,n_times);
+        Serial.print("Returned value: ");Serial.println(l_dist);
       }
       if(packetbuffer[2] == CMD_MVMT)
       {
         chas_dir = packetbuffer[4] -0x30;
         sscanf(&packetbuffer[6],"%d",&angle);
+        Serial.print("CB Stepper Motor Dir: ");Serial.println(chas_dir);
+        Serial.print("CB Stepper Motor angle: ");Serial.println(angle);
         RotateCornerBeacon(chas_dir,angle);
+        //Serial.print("Returned distance: ");Serial.println(cb_dist);
         
       }
     }
@@ -305,6 +330,7 @@ void DispVer()
 }
 
 /**************************Read Packet from Mobile Device ************/
+/*
 uint8_t readPacket1(BLEUart *ble_uart, uint16_t timeout)
 {
   uint16_t origtimeout = timeout, replyidx = 0;
@@ -335,7 +361,7 @@ uint8_t readPacket1(BLEUart *ble_uart, uint16_t timeout)
   return replyidx;
 }
 
-
+*/
 /**************************Read Packet from Serial Port Device ************/
 uint8_t readPacket2(uint16_t timeout)
 {
@@ -454,6 +480,40 @@ void MoveRobot(uint8_t dir, uint32_t dist_ang)
     Serial1.write(CmdBuf[s]);
     
   }
+  //waiting for status form mecanumm arduino
+  do
+  {
+    if(Serial1.available())
+    {
+      sta=Serial1.read();
+    }
+  }while((sta!='F')&&(sta!='f'));  
+}
+
+void SetSpeedMoveRobot(uint32_t sped)
+{
+  char sta='p';
+  char CmdBuf[20];
+  
+  CmdBuf[0]='!';
+  CmdBuf[1]='3';
+  CmdBuf[2]='S';
+  CmdBuf[3]=',';
+  //CmdBuf[4]=(char)(sped+0x30);
+  //CmdBuf[5]=',';
+  //CmdBuf[6]=dist_ang;
+  memcpy(&CmdBuf[4], &sped, sizeof(sped));
+  //packetbuffer[6]=(char)dist_ang;
+  //sscanf(&CmdBuf[6],"%d",&dist_ang);
+  //sprintf(&CmdBuf[6],"%d",dist_ang);
+  Serial.print("Mecanum wheel Speed: ");Serial.println(sped);
+  SelectPort(WC_SPORT);
+  for(int s=0; s<20 ; s++)
+  {
+    Serial1.write(CmdBuf[s]);
+    
+  }
+  //waiting for status form mecanumm arduino
   do
   {
     if(Serial1.available())
@@ -568,7 +628,7 @@ void LaserControl(bool on_off) // format is !PLX where X = 0 or 1 and P = 4 or 5
 
 uint32_t GetMesurment_FL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
 {
-  FLDistance =0;
+  FLDistance =0;Distance =0;
   Serial.print("Front Laser Measurement Mode: ");Serial.println(mode);
   Serial.print("Number of times: ");Serial.println(n_times);
   
@@ -622,22 +682,22 @@ uint32_t GetMesurment_FL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
       MeasResult[i]=Serial1.read();
       }
       
-      FLDistance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
-      Serial.print("FL Measured ditance: ");Serial.println(FLDistance);
-      bleuart.print("FL Distance in mm: ");bleuart.println(FLDistance);
+      Distance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
+      Serial.print("FL Measured distance: ");Serial.println(Distance);
+      //bleuart.print("FL Distance in mm: ");bleuart.println(Distance);
     }
-    FLDistance += FLDistance;
+    FLDistance += Distance;
   }
-  if(n_times)
-  {
+  //if(n_times)
+  //{
     FLDistance = FLDistance/n_times;
-  }
+  //}
   return FLDistance; 
 }
 
 uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
 {
-  RLDistance = 0;
+  RLDistance = 0;Distance =0;
   Serial.print("Rear Laser Measurement Mode: ");Serial.println(mode);
   Serial.print("Number of times: ");Serial.println(n_times);
   
@@ -692,22 +752,22 @@ uint32_t GetMesurment_RL(uint8_t mode=LMM_FAST, uint32_t n_times=1)
         MeasResult[i]=Serial1.read();
       }
       
-      RLDistance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
-      Serial.print("RL Measured ditance: ");Serial.println(RLDistance);
-      bleuart.print("RL Distance in mm: ");bleuart.println(RLDistance);
+      Distance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
+      Serial.print("RL Measured distance: ");Serial.println(Distance);
+      //bleuart.print("RL Distance in mm: ");bleuart.println(Distance);
     }
-    RLDistance += RLDistance;
+    RLDistance += Distance;
   }
-  if(n_times)
-  {
+  //if(n_times)
+  //{
      RLDistance = RLDistance/n_times;
-  }
+  //}
   return RLDistance;  
 }
 
 uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode=LMM_FAST, uint32_t n_times=1)
 {
-  uint32_t beacon_dist;
+  uint32_t cl_dist;
   beacon_responce_flag = false;
   
   char CmdBuf[20] = {0};
@@ -715,24 +775,45 @@ uint32_t GetDistanceFromCornerBeacon(uint8_t lm_mode=LMM_FAST, uint32_t n_times=
   CmdBuf[1] = 'O';
   CmdBuf[2] = lm_mode+0x30;
   memcpy(&CmdBuf[3],&n_times,sizeof(n_times));
-  clientUart.write(CmdBuf,20);
-  while(!beacon_responce_flag);
-  sscanf(&corner_beacon_responce[0],"%d",&beacon_dist);
-  Serial.print("Distance received from beacon: ");Serial.println(beacon_dist);
-  return beacon_dist;
+  for(int s = 0; s<20;s++)
+  {
+    clientUart.write(CmdBuf[s]);
+  }
+  while(!beacon_responce_flag)
+  {
+    delay(1);
+  }
+  sscanf(&corner_beacon_responce[0],"%d",&cl_dist);
+  /*for(int s=0;s<20;s++)
+  {
+    Serial.print(corner_beacon_responce[s]);Serial.print(" ");
+  }*/
+  Serial.print("Distance received from beacon: ");Serial.println(cl_dist);Serial.flush();
+  return cl_dist;
 }
 
 void RotateCornerBeacon(uint8_t dir, uint32_t angle)
 {
+  Serial.println("IAM");
+  //uint32_t cb_dist;
   beacon_responce_flag = false;
   char CmdBuf[20] = {0};
   CmdBuf[0] = '!';
   CmdBuf[1] = 'M';
   CmdBuf[2] = dir+0x30;
   memcpy(&CmdBuf[3],&angle,sizeof(angle));
+  for(int s=0;s<20;s++)
+  {
+    Serial.print(CmdBuf[s]);Serial.print(" ");
+  }
   clientUart.write(CmdBuf,20);
-  while(!beacon_responce_flag);
+  while(!beacon_responce_flag)
+  {
+    delay(1);
+  }
   
-  //sscanf(&corner_beacon_responce[0],"%d",&beacon_dist);
-  Serial.print("Corner Beacon set to (Degree): ");Serial.println(angle);
+  //sscanf(&corner_beacon_responce[0],"%d",&cb_dist);
+  //Serial.print("Corner Beacon set to (Degree): ");Serial.println(cb_dist);
+  Serial.flush();
+  //return angle;
 }

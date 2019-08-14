@@ -15,11 +15,6 @@ int32_t new_pos=0;
 long current_pos=0;
 //long new_pos;
 
-
-
-
-
-
 #define  led1 7
 #define  dirPin 29
 #define  stepPin 28
@@ -28,8 +23,33 @@ long current_pos=0;
 
 #define EnMotorsPin 30
 
+#define SCP_180D 40000 // Sttep Count Per 180 Degrees rotation
+#define SCP_360D 80000 // Sttep Count Per 360 Degrees rotation
+#define SCP_10D  6000 // Sttep Count Per 10 Degrees rotation
+#define SCP_20D  12000 // Sttep Count Per 20 Degrees rotation
 
+#define NUM_OF_LMMS      3 //Number of Lase Measurement Modes
+#define LMC_SEQ_SIZE     9 //Laser Measurement Command array size
+#define LMR_SEQ_SIZE    13 //Laser Measurement Result array size
+//Laser measurement command & result sequences
+const uint8_t laser_meas_seq[NUM_OF_LMMS][LMC_SEQ_SIZE] = {
+                                                      {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x02,0x23}, //OneShotFast mode
+                                                      {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x01,0x22}, //OneShotSlow mode
+                                                      {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x00,0x21}  //OneShotAuto mode 
+                                                    };
+//const unsigned char OneShotFast[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x02,0x23};
+//const unsigned char OneShotSlow[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x01,0x22};
+//const unsigned char OneShotAuto[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x00,0x21};
 
+const unsigned char ReadStatus[] = {0xAA,0x80,0x00,0x00,0x80};
+const uint8_t laser_onoff_cmd_seq[2][LMC_SEQ_SIZE] = {
+                                                        {0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x00,0xC0},  
+                                                        {0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x01,0xC1}
+                                                      };
+//const uint8_t LaserONdata[] = {0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x01,0xC1};
+//const uint8_t LaserOFFdata[] ={0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x00,0xC0};
+
+uint8_t MeasResult[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
  
 
 
@@ -97,10 +117,17 @@ void rotate_sm(bool dir, int32_t new_pos)  //new_pos in degree
 
 uint8_t set_angle()
 {
+  long x;bool return_startP = 1;
   digitalWrite(EnMotorsPin,LOW);
   digitalWrite(dirPin,LOW);
-  for(int x = 0; x < 40000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);   
+  for(x = 0; x < SCP_180D; x++)
+  {
+    if(digitalRead(sensor_pin))
+    {
+      digitalWrite(EnMotorsPin,HIGH);
+      return_startP = 0;
+      break;   
+    }
     digitalWrite(stepPin,HIGH); 
     delayMicroseconds(100); 
     digitalWrite(stepPin,LOW); 
@@ -110,12 +137,29 @@ uint8_t set_angle()
   }
   delay(1000);
   digitalWrite(dirPin,HIGH);
-  for(int x = 0; x < 80000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
+  for(x = 0; x < SCP_360D; x++) 
+  {
+    if(digitalRead(sensor_pin))
+    {
+      digitalWrite(EnMotorsPin,HIGH);
+      return_startP = 0;
+      break;
+    }
     digitalWrite(stepPin,HIGH); 
     delayMicroseconds(100); 
     digitalWrite(stepPin,LOW); 
     delayMicroseconds(100);
+  }
+  if(return_startP)
+  {
+    digitalWrite(dirPin,LOW);
+    for(x; x > SCP_180D; x--)
+    {
+      digitalWrite(stepPin,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(stepPin,LOW); 
+      delayMicroseconds(100);
+    }
   }
   delay(1000);
       
@@ -125,32 +169,37 @@ uint8_t set_angle()
 void Home_pos()
 {
   if(digitalRead(sensor_pin))
-{
+  {
+    digitalWrite(EnMotorsPin,LOW);
+    digitalWrite(dirPin,LOW);   //clk wise
+    for(int x = 0; x < SCP_10D; x++) 
+    {
+      digitalWrite(stepPin,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(stepPin,LOW); 
+      delayMicroseconds(100); 
+    }
+    delay(1000);
+    digitalWrite(dirPin,HIGH);   //anti_clk wise
+    for(int x = 0; x < SCP_20D; x++) 
+    {
+      if(digitalRead(sensor_pin))
+      {
+        digitalWrite(EnMotorsPin,HIGH);
+      }
+      digitalWrite(stepPin,HIGH); 
+      delayMicroseconds(100); 
+      digitalWrite(stepPin,LOW); 
+      delayMicroseconds(100);
+    }
+    delay(1000);
+  }
+  else
+  {
+    set_angle();
+   
+  }
   digitalWrite(EnMotorsPin,LOW);
-  digitalWrite(dirPin,LOW);   //clk wise
-  for(int x = 0; x < 6000; x++) {
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100); 
-  }
-  delay(1000);
-  digitalWrite(dirPin,HIGH);   //anti_clk wise
-  for(int x = 0; x < 12000; x++) {
-    if(digitalRead(sensor_pin))digitalWrite(EnMotorsPin,HIGH);
-    digitalWrite(stepPin,HIGH); 
-    delayMicroseconds(100); 
-    digitalWrite(stepPin,LOW); 
-    delayMicroseconds(100);
-  }
-  delay(1000);
-}
-else
-{
-  set_angle();
- 
-}
-digitalWrite(EnMotorsPin,LOW);
 
 }
 

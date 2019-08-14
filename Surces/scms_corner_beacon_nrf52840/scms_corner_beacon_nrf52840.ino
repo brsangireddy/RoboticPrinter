@@ -14,7 +14,10 @@
 
 // Uart over BLE service
 BLEUart bleuart;
+BLEDfu  bledfu;  // OTA DFU service
+BLEDis  bledis;  // device information
 
+BLEBas  blebas;  // battery
 // ************* Functions decalarion here *************************
 
 void SelfTest();  // Self Test
@@ -26,8 +29,8 @@ void StartAdv();  // Start Adv
 void DispVer();   // Display Version
 void DispOneshot(); // Display Oneshot measurement
 void DispStatus(); // Display Status
-void LaserON();   //Turn ON Laser
-void LaserOFF();  // Turn OFF Laser
+//void LaserON();   //Turn ON Laser
+//void LaserOFF();  // Turn OFF Laser
 void LaserControl();  // Laser Control
 void LaserEnable(); // Laser module Enable/Disbale 
 void StepMotor();  // Stepper Motor functions
@@ -59,21 +62,9 @@ const byte s2=20;
 const byte s3=21;
 const byte en=22;
 
-int pulsew=1; // milliseconds
-int delaypluse=1; // delay between pulses
-
-const unsigned char OneShotFast[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x02,0x23};
-const unsigned char OneShotSlow[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x01,0x22};
-const unsigned char OneShotAuto[] = {0xAA,0x00,0x00,0x20,0x00,0x01,0x00,0x00,0x21};
-const unsigned char ReadStatus[] = {0xAA,0x80,0x00,0x00,0x80};
-const unsigned char LaserONdata[] = {0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x01,0xC1};
-const unsigned char LaserOFFdata[] ={0xAA,0x00,0x01,0xBE,0x00,0x01,0x00,0x00,0xC0};
-
-unsigned char MeasResult[]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-
-
 int i,j,k;
-int Distance = 0,summ=0;
+int Distance = 0;
+uint32_t summ=0;
 uint16_t replyidx = 0;
 //SoftwareSerial portOne(15,17);
 
@@ -100,14 +91,26 @@ void setup(void)
   //digitalWrite(en,LOW);
 
   Home_pos();
+  Serial.println("Home detected.");
 }
 
 // ************ Loop Function ***************************
 
 void loop(void)
 {
-  uint8_t len = readPacket(&bleuart, 500);  // Wait for new data arrive
+  //char ack[20];
+  //ack[0]='C';
+  //ack[1]='B';
+  
+
+  
+  uint16_t len = readPacket(&bleuart, 500);  // Wait for new data arrive
   if (len == 0) return;
+  Serial.print("Serial Received packet: ");
+  for(uint16_t i=0;i<len;i++)
+  {
+    Serial.print(packetbuffer[i],HEX);Serial.print(" ");
+  }
   //SendToOnChassisBeaconF();
 //#if 1
   // printHex(packetbuffer, len);           // for debug
@@ -116,12 +119,14 @@ void loop(void)
   if (packetbuffer[1] == 'O')   // One shot Measurment Comamnd
   {
       mode = packetbuffer[2]-0x30;
-      sscanf(&packetbuffer[3],"%d",&n_time);
-      bleuart.print(n_time);
+      memcpy(&n_time,&packetbuffer[3],sizeof(n_time));
+      //sscanf(&packetbuffer[3],"%d",&n_time);
       Serial.print("n_time: ");
       Serial.println(n_time,DEC);
       //new_pos=90;
       DispOneshot(mode,n_time);
+      //bleuart.write(ack,20);
+      //bleuart.write(n_time);
   }
       
   if (packetbuffer[1] == 'S')   // Status
@@ -137,13 +142,19 @@ void loop(void)
   if (packetbuffer[1] == 'M')   // StepperMotor Control
   {
       dir = packetbuffer[2]-0x30;
-      sscanf(&packetbuffer[3],"%d",&new_pos);
+      memcpy(&new_pos ,&packetbuffer[3],sizeof(new_pos));
+      //sscanf(&packetbuffer[3],"%d",&new_pos);
       bleuart.print(new_pos);
       Serial.print("new pos: ");
       Serial.println(new_pos,DEC);
       //new_pos=90;
       rotate_sm(dir,new_pos);
+      //Serial.write('C');
+      //bleuart.write("ABCD",4);
+      bleuart.write(new_pos);
   }
+  
+  
 //#endif              
 }
 /*
@@ -182,12 +193,71 @@ void SetupMotor() // Setup Stepper Motor
 
 }
 
+// callback invoked when central connects
+void connect_callback(uint16_t conn_handle)
+{
+  // Get the reference to current connection
+  BLEConnection* connection = Bluefruit.Connection(conn_handle);
+
+  char central_name[32] = { 0 };
+  connection->getPeerName(central_name, sizeof(central_name));
+
+  Serial.print("Connected to ");
+  Serial.println(central_name);
+}
+
+/**
+ * Callback invoked when a connection is dropped
+ * @param conn_handle connection where this event happens
+ * @param reason is a BLE_HCI_STATUS_CODE which can be found in ble_hci.h
+ */
+void disconnect_callback(uint16_t conn_handle, uint8_t reason)
+{
+  (void) conn_handle;
+  (void) reason;
+
+  Serial.println();
+  Serial.println("Disconnected");
+}
 void SetupBlue()
 {
+   Bluefruit.autoConnLed(true);
+
+  // Config the peripheral connection with maximum bandwidth 
+  // more SRAM required by SoftDevice
+  // Note: All config***() function must be called before begin()
+  Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
+
   Bluefruit.begin();
   Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
-  Bluefruit.setName("VGS_LASER");  // Name of the Bluetooth Laser Beacon 1
+  Bluefruit.setName("LCbb_CBEACON_00");
+  //Bluefruit.setName(getMcuUniqueID()); // useful testing with multiple central connections
+  Bluefruit.Periph.setConnectCallback(connect_callback);
+  Bluefruit.Periph.setDisconnectCallback(disconnect_callback);
+
+  // To be consistent OTA DFU should be added first if it exists
+  bledfu.begin();
+
+  // Configure and Start Device Information Service
+  bledis.setManufacturer("Adafruit Industries");
+  bledis.setModel("Bluefruit Feather52");
+  bledis.begin();
+
+  // Configure and Start BLE Uart Service
+  bleuart.begin();
+
+  // Start BLE Battery Service
+  blebas.begin();
+  blebas.write(100);
+
+  // Set up and start advertising
+  //startAdv();
+  /*
+  Bluefruit.begin();
+  Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
+  Bluefruit.setName("LCbb_CBEACON_00");  // Name of the Bluetooth Laser Beacon 1
   bleuart.begin(); // Configure and start the BLE Uart service
+  */
 }
 
 void StartAdv(void)
@@ -207,19 +277,24 @@ void SelfTest()
 {
   DispStatus();
   delay(1000);
-  LaserON();      // Turn Laser ON
+  for (i=0;i<LMC_SEQ_SIZE;i++)
+  {
+    Serial1.write(laser_onoff_cmd_seq[0][i]);
+  }
+  delay(1000);
+  for (i=0;i<LMC_SEQ_SIZE;i++)
+  {
+    Serial1.write(laser_onoff_cmd_seq[1][i]);
+  }
+/*  LaserON();      // Turn Laser ON
   delay(1000);    // Delay
   LaserOFF();     // Turn Laser OFF
+*/
 }
 
 void DispVer()
 {  
-  int i=0;
     Serial.println(ver);
-    for(i=0;i<2;i++)
-    {
-      Serial.write(packetbuffer[i]);
-    }
     bleuart.println(ver);
 }
 
@@ -246,6 +321,7 @@ uint8_t readPacket(BLEUart *ble_uart, uint16_t timeout)
     if (timeout == 0) break;
     delay(1);
   }
+
   packetbuffer[replyidx] = 0;  // null term
   if (!replyidx)  // no data or timeout 
     return 0;
@@ -265,16 +341,23 @@ float parsefloat(uint8_t *buffer)
 // ******************* One Shot Measurement ********************
 void DispOneshot(bool mode, int32_t n_time)
 { 
-  
+  //char ack[20];
+  summ = 0;
   //n_time =(packetbuffer[3]-48)*10+(packetbuffer[4]-48);
   for(k=0;k < n_time;k++)
   { 
     int timeout=5000;  
-    while(Serial1.available()) 
+    Serial1.flush();
+    /*while(Serial1.available()) 
     {
       i=Serial1.read();
     }  // clear Buffer
-    
+    */
+    for(int i = 0; i<LMC_SEQ_SIZE ; i++)
+    {
+      Serial1.write(laser_meas_seq[mode][i]);
+    }
+    /*
     if (mode == 1)
     {
       for (i=0;i<9;i++)
@@ -290,7 +373,7 @@ void DispOneshot(bool mode, int32_t n_time)
       for (i=0;i<9;i++)
       Serial1.write(OneShotAuto[i]);
     }   
-    
+    */
     while(timeout-- && !Serial1.available())
     {
       if (timeout==0)break;
@@ -306,20 +389,16 @@ void DispOneshot(bool mode, int32_t n_time)
          }
      Distance = MeasResult[6]*256*256*256+MeasResult[7]*256*256+MeasResult[8]*256+MeasResult[9];
      Serial.println(Distance);
-     summ += Distance;
-     
-     
+     summ += Distance; 
      }
-    
-     
-     
- 
  }
  summ /= n_time;
- Serial.print("avg :");
- Serial.println(summ);
- bleuart.print("avg:");
- bleuart.println(summ);
+ Serial.print("avg :");Serial.println(summ);
+ //ack[0]=summ;
+ //summ = 20;
+ bleuart.print(summ); // return to LCbb_RCONTROL_00
+ //bleuart.print("avg:");
+ //bleuart.write(summ);
 }
  // ******************* Display Status ********************
 void DispStatus()
@@ -345,10 +424,18 @@ void DispStatus()
  
 void LaserControl(bool s_button)
 { 
- if (s_button == 1)
+  Serial.print("Turning Laser On/Off: ");Serial.println(s_button);
+  for (int i=0; i<LMC_SEQ_SIZE; i++)
+  {
+    Serial1.write(laser_onoff_cmd_seq[s_button][i]);
+    Serial.print(laser_onoff_cmd_seq[s_button][i],HEX);Serial.print(" ");
+  }
+  delay(1000);
+ /*if (s_button == 1)
     LaserON();
  if (s_button == 0)
     LaserOFF();
+ */
 }
 
 void LaserEnable()
@@ -364,7 +451,8 @@ void LaserEnable()
   if (packetbuffer[2] == '0')
     digitalWrite(EN_LASER, LOW);   // Disable Laser Module
 }
- 
+
+/*
 void LaserON()
 { 
   for (i=0;i<9;i++)
@@ -378,3 +466,4 @@ void LaserOFF()
   Serial1.write(LaserOFFdata[i]);
   delay(1000);
 }
+*/

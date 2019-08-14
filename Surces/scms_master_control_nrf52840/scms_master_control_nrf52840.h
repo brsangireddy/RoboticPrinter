@@ -41,7 +41,7 @@ String ver =   "Robotic Printer Ver 1.0";
 #define CMD_VER       'V' //Firmware version details
 #define CMD_MVMT      'M' //Movement control
 #define CMD_LOS       'O' //Laser OneShot Measurment 
-
+#define CMD_MWSPEED    'S' //Mecanum Wheel Speed
 //Control Target for commands
 #define CT_FSM        '1' //Front Stepper Motor 
 #define CT_RSM        '2' //Rear Stepper Motor
@@ -60,7 +60,7 @@ const byte S3 = 21;     // to UART Mux
 const byte EN_FrontLaser = 4;
 const byte EN_RearLaser  = 5;
 
-#define NUM_OF_LMMS      3 //Number of Lase Measurement Modes
+#define NUM_OF_LMMS      3 //Number of Laser Measurement Modes
 #define LMC_SEQ_SIZE     9 //Laser Measurement Command array size
 #define LMR_SEQ_SIZE    13 //Laser Measurement Result array size
 //Laser measurement command & result sequences
@@ -86,7 +86,7 @@ uint8_t MeasResult[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
 #define READ_BUFSIZE                    (20)
 
 bool beacon_responce_flag = false;
-char corner_beacon_responce[20+1] = { 0 };
+
 
 char beacon_names[4][32] = { "LCbb_CBEACON_00","LCbb_CBEACON_01","LCbb_CBEACON_02","LCbb_CBEACON_03" };
 byte cbeacon_sel = 0; //Corner Beacon Selected

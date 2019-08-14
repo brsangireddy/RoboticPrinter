@@ -35,7 +35,7 @@ int i,j,k;
 int Distance = 0;
 int Status=0;
 bool mfl = 0;
-int MxSpeed = 200;
+int32_t MxSpeed = 300;
 int MxAcc   = 200;
 
 const byte EnMotorsPin=4;      // All Motors enable
@@ -125,7 +125,7 @@ void ReadData(void)
     }
     if (packetbuffer[2] == 'S')   // Sets maxspeed
     {
-      int MxSpeed;
+      //int32_t MxSpeed;
       /*String inp;
       inp = packetbuf.substring(3);
       inp.toCharArray(charBuf,25); 
@@ -134,7 +134,7 @@ void ReadData(void)
         return;
         */
       
-      sscanf(&packetbuffer[4], "%d", &MxSpeed);
+      memcpy(&MxSpeed, &packetbuffer[4], sizeof(MxSpeed));
       Serial.print("MaxSpped: ");Serial.println(MxSpeed);
       SetSpeed(MxSpeed);
     }
@@ -169,6 +169,8 @@ void ReadData(void)
 
 void SetupMecanum()
 {
+  //MxSpeed = 1500;
+  Serial.print("Setiing Wheel Speed to: ");Serial.println(MxSpeed);
 // pinMode(EnMotorsPin, OUTPUT);
 // digitalWrite(EnMotorsPin, LOW);        // Enable = LOW
   LeftFrontWheel.setMaxSpeed(MxSpeed);
@@ -180,6 +182,7 @@ void SetupMecanum()
   RightBackWheel.setMaxSpeed(MxSpeed);
   RightBackWheel.setAcceleration(MxAcc);
   ResetMotors();                         // reset poS1tions to zero
+  
 }
 
 void StopMecanum() // Emergency Stop format = !3X
@@ -214,8 +217,9 @@ void EnMecanum(int m_en_dis)  // Format is !3E,X where X is 0 or 1
   //S1.write(Status);
 }
 
-void SetSpeed(int MxSpeed)  // Format is !3S,XXXX where XXXX is max speed 1000
+void SetSpeed(int32_t MxSpeed)  // Format is !3S,XXXX where XXXX is max speed 1000
 {
+  SetupMecanum();
  S1.print("Max Speed set to=");
  S1.println(MxSpeed);
  //S1.write('F');

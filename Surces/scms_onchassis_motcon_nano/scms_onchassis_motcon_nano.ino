@@ -185,7 +185,7 @@ float parsefloat(uint8_t *buffer)
 
 
 // crosscheck the Front beacon position
-uint8_t CrossCheckFront()
+uint8_t CrossCheck_FSm()
 {
   digitalWrite(SmFEn,LOW);
   digitalWrite(SmFDir,LOW);   //clk wise
@@ -214,14 +214,14 @@ uint8_t CrossCheckFront()
 }
 
 //Set the Front Beacon position to Zero position
-uint8_t set_angleFront()
+uint8_t SetAngle_FSm()
 {
   digitalWrite(SmFEn,LOW);
   digitalWrite(SmFDir,LOW);
   long x;uint8_t return_front_startP = 1;
   if(digitalRead(SmFHD))
   {
-    CrossCheckFront();
+    CrossCheck_FSm();
     return_front_startP = 0;
     //Serial.println("Fzero angle is done");
     //chassisBeacon.println("Fzero angle is done.");
@@ -279,7 +279,7 @@ uint8_t set_angleFront()
 }
 
 // crosscheck the Back beacon position
-uint8_t CrossCheckBack()
+uint8_t CrossCheck_BSm()
 {
   digitalWrite(SmBEn,LOW);
     digitalWrite(SmBDir,LOW);   //clk wise
@@ -306,14 +306,14 @@ uint8_t CrossCheckBack()
 }
 
 //Set the Back Beacon position to Zero position
-uint8_t set_angleBack()
+uint8_t SetAngle_BSm()
 {
   digitalWrite(SmBEn,LOW);
   digitalWrite(SmBDir,LOW);
   long x;uint8_t return_back_startP = 1;
   if(digitalRead(SmBHD))
   {
-    CrossCheckBack();
+    CrossCheck_BSm();
     return_back_startP = 0;
     //Serial.println("Rzero angle is done");
     //chassisBeacon.println("Rzero angle is done.");
@@ -370,16 +370,17 @@ uint8_t set_angleBack()
 
 uint32_t HomePosition()
 {
-  set_angleFront();
-  chassisBeacon.println("Fzero angle is done.");
-  set_angleBack();
-  chassisBeacon.println("Rzero angle is done.");
+  SetAngle_FSm();
+  chassisBeacon.println("FL is zero angle.");
+  SetAngle_BSm();
+  chassisBeacon.println("RL is zero angle.");
 }
 
 void FrontMotor(bool dir,int32_t new_pos) // format is !1M,X,YYYY, X = Direction (0,1, if 2, Enable/Disable), YYYY is number of steps
 {
   Serial.println("Rotating Front Motor.");
   digitalWrite(SmFEn,LOW); 
+  digitalWrite(SmFDir,LOW);
   int32_t net_angle=0;
   if(new_pos>90)
   {
@@ -414,153 +415,21 @@ void FrontMotor(bool dir,int32_t new_pos) // format is !1M,X,YYYY, X = Direction
   
   
   delay(500);
-  for(long steps = 0; steps < wheelSteps; steps++){
-       
-         digitalWrite(SmFPulse,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(SmFPulse,LOW); 
-         delayMicroseconds(100);
+  for(long steps = 0; steps < wheelSteps; steps++)
+  {       
+     digitalWrite(SmFPulse,HIGH); 
+     delayMicroseconds(100); 
+     digitalWrite(SmFPulse,LOW); 
+     delayMicroseconds(100);
    }
 
-/*
-  digitalWrite(SmFEn,LOW);
-  wheelSteps = (Degree*222.222);
-  Serial.println(wheelSteps);
-
-  if(mode == '1') 
-  {
-    digitalWrite(SmFDir,LOW);// clock wise direction
-    if(temp2F>0 || temp1F>0)
-    {
-      if(temp2F > 0)
-      {
-        for(long steps = temp2F;steps > 0;steps--)
-        {
-          temp2F=steps-1;
-          digitalWrite(SmFPulse,HIGH);  
-          delayMicroseconds(100); 
-          digitalWrite(SmFPulse,LOW); 
-          delayMicroseconds(100);         
-        } 
-      } 
-      if(temp1F > 0)
-      {
-        digitalWrite(SmFDir,HIGH);
-        for(long steps = temp1F;steps > 0;steps--)
-        {
-          temp1F=steps-1;
-          digitalWrite(SmFPulse,HIGH);  
-          delayMicroseconds(100); 
-          digitalWrite(SmFPulse,LOW); 
-          delayMicroseconds(100);         
-        } 
-      }   
-       //if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH); 
-       for(long steps = 0; steps < wheelSteps; steps++)
-       {
-         if(temp1F > 40000)
-         {
-           digitalWrite(SmFEn,HIGH);           
-           break;           
-         }
-         temp1F++;
-         digitalWrite(SmFPulse,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(SmFPulse,LOW); 
-         delayMicroseconds(100);
-       }
-       
-    }
-    else
-    {
-      // if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH);       
-      for(long steps = 0; steps < wheelSteps; steps++)
-      {
-        if(temp1F > 40000)
-        {
-          digitalWrite(SmFEn,HIGH);
-          break;
-        }
-        temp1F++;
-        //Serial.println(temp1);                 
-        digitalWrite(SmFPulse,HIGH); 
-        delayMicroseconds(100); 
-        digitalWrite(SmFPulse,LOW); 
-        delayMicroseconds(100);
-       }
-       
-     }
-     
-  }
-  if(mode == '0')
-  {
-    digitalWrite(SmFDir,HIGH);  
-    if(temp1F>0 || temp2F>0)
-    {
-      if(temp1F>0)
-      {
-        for(long steps = temp1F;steps > 0;steps--)
-        {
-          temp1F=steps-1;
-          digitalWrite(SmFPulse,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(SmFPulse,LOW); 
-          delayMicroseconds(100);         
-        }
-      }
-      if(temp2F>0)
-      {
-        digitalWrite(SmFDir,LOW);
-        for(long steps = temp2F;steps > 0;steps--)
-        {
-          temp2F=steps-1;
-          digitalWrite(SmFPulse,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(SmFPulse,LOW); 
-          delayMicroseconds(100);         
-        }
-      }
-       for(long steps = 0; steps < wheelSteps; steps++)
-       {
-         //Serial.println(temp2);
-         if(temp2F > 40000) 
-         {
-           digitalWrite(SmFEn,HIGH);  
-           break;     
-         }
-         temp2F++;
-         digitalWrite(SmFPulse,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(SmFPulse,LOW); 
-         delayMicroseconds(100);         
-        }
-             
-     }
-     else
-     {
-       for(long steps = 0; steps < wheelSteps; steps++)
-       {  
-         if(temp2F > 40000) 
-         {
-           digitalWrite(SmFEn,HIGH);
-           break;
-          }
-          temp2F++;
-           //Serial.println(temp2);       
-          digitalWrite(SmFPulse,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(SmFPulse,LOW); 
-          delayMicroseconds(100);      
-        }                
-      }
- }
- */
  //chassisBeacon.write('F');
 } 
 void BackMotor(bool dir,int32_t new_pos) // format is !2M,X,YYYY, X = Direction (0,1, if 2, Enable/Disable), YYYY is number of steps
  {
   Serial.println("Rotating Rear Motor."); 
   digitalWrite(SmBEn,LOW);
+  digitalWrite(SmBDir,LOW);
   int32_t net_angle=0;
   if(new_pos>90)
   {
@@ -595,151 +464,13 @@ void BackMotor(bool dir,int32_t new_pos) // format is !2M,X,YYYY, X = Direction 
   
   
   delay(500);
-  for(long steps = 0; steps < wheelSteps; steps++){
-       
-         digitalWrite(SmBPulse,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(SmBPulse,LOW); 
-         delayMicroseconds(100);
+  for(long steps = 0; steps < wheelSteps; steps++)
+  {  
+     digitalWrite(SmBPulse,HIGH); 
+     delayMicroseconds(100); 
+     digitalWrite(SmBPulse,LOW); 
+     delayMicroseconds(100);
    }
-
-
-  /*
-  digitalWrite(SmBEn,LOW);
-  wheelSteps = (Degree*222.222);
-  Serial.println(wheelSteps);
-
-  if(mode == '1') 
-  {
-    Serial.println("Enter:");
-    digitalWrite(SmBDir,LOW);// clock wise direction
-    if(temp2B>0 || temp1B>0)
-    {
-      if(temp2B > 0)
-      {
-        for(long steps = temp2B;steps > 0;steps--)
-        {
-          temp2B=steps-1;
-          digitalWrite(SmBPulse,HIGH);  
-          delayMicroseconds(100); 
-          digitalWrite(SmBPulse,LOW); 
-          delayMicroseconds(100);         
-        } 
-      } 
-      if(temp1B > 0)
-      {
-        digitalWrite(SmBDir,HIGH);
-        for(long steps = temp1B;steps > 0;steps--)
-        {
-          temp1B=steps-1;
-          digitalWrite(SmBPulse,HIGH);  
-          delayMicroseconds(100); 
-          digitalWrite(SmBPulse,LOW); 
-          delayMicroseconds(100);         
-        } 
-      } 
-      //if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH); 
-      for(long steps = 0; steps < wheelSteps; steps++)
-      {                                 
-        //Serial.println(temp1);
-        if(temp1B > 40000)
-        {
-          digitalWrite(SmBEn,HIGH);           
-          break;           
-        }
-        temp1B++;
-        digitalWrite(SmBPulse,HIGH); 
-        delayMicroseconds(100); 
-        digitalWrite(SmBPulse,LOW); 
-        delayMicroseconds(100);                                               
-      }
-      
-    }
-    else
-    {
-      // if(temp1 > 40000) digitalWrite(EnMotorsPin,HIGH);       
-      for(long steps = 0; steps < wheelSteps; steps++)
-      {
-        if(temp1B > 40000)
-        {
-          digitalWrite(SmBEn,HIGH);
-          break;
-        }
-        temp1B++;
-        //Serial.println(temp1);                 
-        digitalWrite(SmBPulse,HIGH); 
-        delayMicroseconds(100); 
-        digitalWrite(SmBPulse,LOW); 
-        delayMicroseconds(100);
-       }
-       
-     }
-    
-  }
-  if(mode == '0')
-  {
-    digitalWrite(SmBDir,HIGH);  
-    if(temp1B>0 || temp2B>0)
-    {
-      if(temp1B>0)
-      {
-        for(long steps = temp1B;steps > 0;steps--)
-        {
-          temp1B=steps-1;
-          digitalWrite(SmBPulse,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(SmBPulse,LOW); 
-          delayMicroseconds(100);         
-        }
-      }
-      if(temp2B>0)
-      {
-        digitalWrite(SmBDir,LOW);
-        for(long steps = temp2B;steps > 0;steps--)
-        {
-          temp2B=steps-1;
-          digitalWrite(SmBPulse,HIGH); 
-          delayMicroseconds(100); 
-          digitalWrite(SmBPulse,LOW); 
-          delayMicroseconds(100);         
-        }
-      }
-      for(long steps = 0; steps < wheelSteps; steps++)
-      {
-        if(temp2B > 40000) 
-        {
-          digitalWrite(SmBEn,HIGH);  
-          break;     
-        }
-        temp2B++;
-        digitalWrite(SmBPulse,HIGH); 
-        delayMicroseconds(100); 
-        digitalWrite(SmBPulse,LOW); 
-        delayMicroseconds(100);         
-      }
-          
-     }
-     else
-     {
-       for(long steps = 0; steps < wheelSteps; steps++)
-       {  
-         if(temp2B > 40000) 
-         {
-           digitalWrite(SmBEn,HIGH);
-           break;
-         }
-         temp2B++;
-         //Serial.println(temp2);       
-         digitalWrite(SmBPulse,HIGH); 
-         delayMicroseconds(100); 
-         digitalWrite(SmBPulse,LOW); 
-         delayMicroseconds(100);             
-        } 
-                   
-      }
-    
- }
- */
  //chassisBeacon.write('F');
 } 
 void charToString(char S[], String &D)

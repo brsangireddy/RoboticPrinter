@@ -31,6 +31,7 @@ BLEUart bleuart;
 BLEClientUart clientUart;
 
 extern char packetbuffer[]; 
+extern char corner_beacon_responce[];
 bool cmd_packet_received = false;
 void prph_connect_callback(uint16_t conn_handle);
 void prph_disconnect_callback(uint16_t conn_handle, uint8_t reason);
@@ -52,7 +53,7 @@ void SetupBlue(void)
   
   // Initialize Bluefruit with max concurrent connections as Peripheral = 1, Central = 1
   // SRAM usage required by SoftDevice will increase with number of connections
-  Bluefruit.begin(1, 1);
+  Bluefruit.begin(1, 0);
   Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
   Bluefruit.setName("LCbb_RCONTROL_00");
 
@@ -162,11 +163,20 @@ void prph_bleuart_rx_callback(uint16_t conn_handle)
   
   Serial.print("[Prph] RX: ");
   Serial.println(packetbuffer);
-  //for(int i=0;i<20;i++)
-  //{
-  //  packetbuffer[i]=str[i];  
-  //}
-  
+  for(int i=0;i<20;i++)
+  {
+    Serial.print(packetbuffer[i]);Serial.print(" ");
+  }
+
+  if ( clientUart.discovered())
+  {
+   
+    clientUart.print(packetbuffer);
+  }
+  else
+  {
+    bleuart.println("[Prph] Central role not connected");
+  }
   /*if ( clientUart.discovered() && (packetbuffer[1] == '5' ))
   {
     packetbuffer[1] = '!';
@@ -175,8 +185,8 @@ void prph_bleuart_rx_callback(uint16_t conn_handle)
   else
   {
     bleuart.println("[Prph] Central role not connected");
-  }
-  */
+  }*/
+  
   cmd_packet_received = true;
 }
 
@@ -239,13 +249,17 @@ void cent_bleuart_rx_callback(BLEClientUart& cent_uart)
   memset(corner_beacon_responce,0,21);
   cent_uart.read(corner_beacon_responce, 20);
       
-  Serial.print("[Cent] RX: ");
-  Serial.println(corner_beacon_responce);
-
+  Serial.print("[Cent] RX: ");Serial.print(corner_beacon_responce);
+  /*for(int i=0 ; i<20;i++)
+  {
+    Serial.print(corner_beacon_responce[i]);Serial.print(" ");
+  }
+  */
   if ( bleuart.notifyEnabled() )
   {
+    //Serial.println("cb resp");
     // Forward data from our peripheral to Mobile
-    bleuart.print( corner_beacon_responce );
+    //bleuart.print( corner_beacon_responce );
   }else
   {
     // response with no prph message
