@@ -11,14 +11,14 @@
 
 #define CMD_SER_RX 3 //D3 as Rx for receiving control commands
 #define CMD_SER_TX 2 //D2 as Tx for sending reply for commands
-#define CMD_SER_BAUD 115200
-#define DBG_SER_BAUD 115200
+#define DBG_SER_BAUD 115200 //For sending console messages to serial terminal.
+#define CMD_SER_BAUD 19200  //For receiving commands from master controller
 
-#define CFG_MECANUM_DFLT_MAXSPEED 1000
-#define CFG_MECANUM_DFLT_MAXACCEL 100 
+#define CFG_MOTORS_MAXSPEED 800
+#define CFG_MOTORS_MAXACCEL 200 
 
 #define TIMEOUT_READ_CMDPKT 1000
-#define DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS 5000
+#define DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS 1000
 
 #define SPMM  10.19 //Steps Per MilliMeter @Wheel dia:10cm, pulses/revoluton:3200
 #define SPD   48.35 //Steps per Degree rotation
@@ -65,20 +65,20 @@
 #define CMD_VALS_FORMAT CMD_VALS_FORMAT_HEX
 
 char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 to hold null character
-float pos_x_max = 91440; //1ft=304.8mm, 300ft=91440mm
-float pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
-float cur_pos_x = 0.0; //current x position of the carriage in the layout
-float cur_pos_y = 0.0; //current y position of the carriage in the layout
-float req_pos_x = 0.0; //requested new position x of the carriage in the layout
-float req_pos_y = 0.0; //requested new position y of the carriage in the layout
-float rot_degs  = 0.0;
-float rot_mins  = 0.0;
-char  rot_dir   = MODE_ROT_DIR_CW; //Clockwise (default)
-
-uint32_t MaxSpeed = CFG_MECANUM_DFLT_MAXSPEED;
-uint32_t MaxAccel = CFG_MECANUM_DFLT_MAXACCEL;
-bool steps_togo_remaining = false;
+uint32_t pos_x_max = 91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t cur_pos_x = 0; //current x position of the carriage in the layout
+uint32_t cur_pos_y = 0; //current y position of the carriage in the layout
+uint32_t req_pos_x = 0; //requested new position x of the carriage in the layout
+uint32_t req_pos_y = 0; //requested new position y of the carriage in the layout
+float rot_degs     = 0.0;
+char  rot_dir      = MODE_ROT_DIR_CW; //Clockwise (default)
 uint32_t wheel_steps = 0;
+uint32_t pending_action_wheel_steps = 0;
+bool action_pending = false;
+bool ack_nack_sent = false;
+
+void (*PendingActionConfigMotors)(void);
 
 //Instantiate stepper motor objects for four wheels. arguments:(1,dir_pin,step_pulse_pin) 
 //1st argument is fixed as 1 in all. 2nd is for direction pin number, 3rd is for step pulse pin number of arduino nano
@@ -106,13 +106,10 @@ void ConfigMotorsToMoveSidewaysRight();
 void ConfigMotorsToRotateLeft();
 void ConfigMotorsToRotateRight();
 
-//Function pointers array of motors configuration functions
-void (*ConfigMotors[])(void) = {ConfigMotorsToRotateLeft, ConfigMotorsToRotateRight,
-                                ConfigMotorsToMoveLeftForward, ConfigMotorsToMoveRightForward,
-                                ConfigMotorsToMoveLeftBackward, ConfigMotorsToMoveRightBackward,
-                                ConfigMotorsToMoveSidewaysLeft, ConfigMotorsToMoveSidewaysRight,
-                                ConfigMotorsToMoveForward, ConfigMotorsToMoveBackward };
-                                
-//void (*moveMecanum[])(void) = {RotateLeft,RotateRight , MoveLeftForward, MoveRightForward, MoveLeftBackward, MoveRightBackward, MoveSidewaysLeft, MoveSidewaysRight, MoveForward, MoveBackward };
-
+////Function pointers array of motors configuration functions
+//void (*ConfigMotors[])(void) = {ConfigMotorsToRotateLeft, ConfigMotorsToRotateRight,
+//                                ConfigMotorsToMoveLeftForward, ConfigMotorsToMoveRightForward,
+//                                ConfigMotorsToMoveLeftBackward, ConfigMotorsToMoveRightBackward,
+//                                ConfigMotorsToMoveSidewaysLeft, ConfigMotorsToMoveSidewaysRight,
+//                                ConfigMotorsToMoveForward, ConfigMotorsToMoveBackward };                                
 #endif /*P3RP_CARRIAGE_CONTROL_H*/
