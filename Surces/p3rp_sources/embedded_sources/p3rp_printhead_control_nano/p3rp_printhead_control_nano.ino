@@ -13,7 +13,7 @@ void setup(void)
   SetupVariables();
   SetupSerial(); //Setup debug/console and command serial ports
   SetupPins();
-  SetPrintheadToHomePosition();//to (x,y)=(0,0)
+  MovePrintheadToHome();//to (x,y)=(0,0)
   SetupMotors(); //Setup stepper motors 
   if(SelfTest() == P3RP_SUCCESS)     //call self test routine
   {
@@ -68,9 +68,29 @@ void SetupPins()
   pinMode(Y_HOME_DETECT_PIN,INPUT);    //printhead home position y switch pin as input to read switch status
 }
 
-void SetPrintheadToHomePosition()
+void MovePrintheadToHome()
 {
-  
+  XdirMotor.moveTo(-XMOTOR_MAX_STEPS);
+  YdirMotor.moveTo(-YMOTOR_MAX_STEPS);
+  XdirMotor.setSpeed(x_motor_speed);
+  YdirMotor.setSpeed(y_motor_speed);
+  while((XdirMotor.distanceToGo() >= 0)||(YdirMotor.distanceToGo() >= 0))
+  {
+    if(digitalRead(X_HOME_DETECT_PIN) == LOW)
+    {
+      XdirMotor.runSpeed();
+    }
+    if(digitalRead(Y_HOME_DETECT_PIN) == LOW)
+    {
+      YdirMotor.runSpeed();
+    }
+    if((digitalRead(X_HOME_DETECT_PIN) == HIGH) && (digitalRead(X_HOME_DETECT_PIN) == HIGH))
+    {
+      break;//Printhead reached home position
+    }
+
+  }
+
 }
 void ProcessCommand(void)
 {
@@ -83,7 +103,7 @@ void ProcessCommand(void)
       MoveCarriage();
       break;
     case CMD_SETDIM: //'D'
-      SetLayoutDimentions();
+      SetPrintFrameDimentions();
       break;
     case CMD_SETSPEED: //'S'
       SetMotorsSpeed();
@@ -156,7 +176,6 @@ void MoveCarriage()
     Serial.println("No movement required");
   }
   //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
-  action_pending = true;//There is a followup action for the carriage to move in y-direction after moving in x-direction.
   if(req_pos_y > cur_pos_y)
   {
     dy = req_pos_y - cur_pos_y;
@@ -258,7 +277,7 @@ void StopCarriage() // Cmd format:!3X00000000000000000
  **************************************************************************************************************/
 void RunMotors()
 {
-  if((LeftFrontWheel.distanceToGo() != 0) || (RightFrontWheel.distanceToGo() != 0) || (LeftBackWheel.distanceToGo() != 0) || (RightBackWheel.distanceToGo() != 0))
+  if((XdirMotor.distanceToGo() >= 0) || (YdirMotor.distanceToGo() >= 0))
   {
     XdirMotor.runSpeed();
     YdirMotor.runSpeed();
@@ -349,7 +368,7 @@ void ResetMotors()
 }
 
 // *********************** Move Subroutines **************
-void ConfigXdirMotorToMoveRightt() 
+void ConfigXdirMotorToMoveRight() 
 {
   Serial.println("Configuring to move x->");
   XdirMotor.moveTo(x_motor_steps);
