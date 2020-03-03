@@ -73,27 +73,26 @@ void MovePrintheadToHome()
 {
   XdirMotor.setSpeed(-x_motor_speed);
   YdirMotor.setSpeed(-y_motor_speed);
-  //Serial.print("x motor speed: ");Serial.print(x_motor_speed);Serial.print(" y motor speed: ");Serial.println(y_motor_speed);
-  while(XdirMotor.currentPosition() <= 0)
+  Serial.println("Move the printhead carriage to home (X0,Y0) position.");
+  while((XdirMotor.currentPosition() <= 0) || (YdirMotor.currentPosition() <= 0))
   {
-    if(digitalRead(X0_SENSOR_PIN))
+    if(!digitalRead(X0_SENSOR_PIN))
+    {
+      XdirMotor.runSpeed();
+    }
+    if(!digitalRead(Y0_SENSOR_PIN))
+    {
+      YdirMotor.runSpeed();
+    }
+    if(digitalRead(X0_SENSOR_PIN) && digitalRead(Y0_SENSOR_PIN))
     {
       XdirMotor.setCurrentPosition(0);
-      break;
-    }
-    XdirMotor.runSpeed();
-  }
-  delay(DELAY_BETWEEN_MOVEMENTS);
-  while(YdirMotor.currentPosition() <= 0)
-  {
-   if(digitalRead(Y0_SENSOR_PIN))
-    {
       YdirMotor.setCurrentPosition(0);
       break;
     }
-    YdirMotor.runSpeed();
   }
 }
+
 void ProcessCommand(void)
 {
   Serial.print("Command Received: ");Serial.println(cmd_buf);
