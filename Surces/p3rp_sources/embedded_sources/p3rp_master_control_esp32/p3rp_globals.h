@@ -14,13 +14,15 @@
 #define CARRIAGE_COM_PORT   1
 #define PRINTHEAD_COM_PORT  2
 
-#define CMD_SER_BAUD 115200
-#define DBG_SER_BAUD 115200
+#define DBG_SER_BAUD 115200 //For sending console message to serial terminal
+#define CMD_SER_BAUD 19200  //For sending commands to control modules
 
 //8:1 Serial port expander port selection pins
 #define SP_S1   5
 #define SP_S2   18
 #define SP_S3   19
+
+#define BUZZER_PIN 12
 
 #define TGT_CARRIAGE_CON  '1'
 #define TGT_PRINTHEAD_CON '2' //previously on-chassis rear stepper motor

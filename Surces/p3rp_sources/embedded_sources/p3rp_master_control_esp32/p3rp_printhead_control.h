@@ -27,7 +27,7 @@ void hndPrintHeadControlCmd()
     if(httpserver.argName(i) == "cmd")
     {
       strcpy(resp_str,httpserver.arg(i).c_str());
-      if(httpserver.arg(i).c_str() == "goto")
+      if(httpserver.arg(i) == "goto")
       {
         ph_con_cmd = CMD_GOTO;
       }

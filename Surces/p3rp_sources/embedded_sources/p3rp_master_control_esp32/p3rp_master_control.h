@@ -31,7 +31,10 @@ void ConfigurePortPins()
   digitalWrite(SP_S3, LOW);
   pinMode(SP_S1, OUTPUT);
   pinMode(SP_S2, OUTPUT);
-  pinMode(SP_S3, OUTPUT); 
+  pinMode(SP_S3, OUTPUT);
+
+   digitalWrite(BUZZER_PIN, LOW);
+   pinMode(BUZZER_PIN, OUTPUT);
 }
 
 /*********************************************************************************************
