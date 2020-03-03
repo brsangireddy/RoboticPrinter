@@ -141,18 +141,20 @@ void SetPrintFrameDimentions()
 }
 void MovePrintheadCarriage()
 { 
-  uint32_t dx,dy;
+  int32_t dx,dy;
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
+
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  req_pos_x = (uint32_t)uData.f;
+  req_pos_x = (int32_t)uData.f;
   if(req_pos_x > pos_x_max)
   {
     req_pos_x = pos_x_max; //Restrict it to max value
   }
+
   memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ);//read val string characters to val_array
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);//convert to integer
-  req_pos_y = (uint32_t)uData.f;
+  req_pos_y = (int32_t)uData.f;
   if(req_pos_y > pos_y_max)
   {
     req_pos_y = pos_y_max;//Restrict it to max value  
@@ -160,20 +162,16 @@ void MovePrintheadCarriage()
   Serial.print("Current pos x,y (mm): (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.println(")");  
   Serial.print("Request pos x,y (mm): (");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
 
-  //Move carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by wheel_steps
-  if(req_pos_x > cur_pos_x)
+  //Move printhead carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by x_motor_steps
+  dx = req_pos_x - cur_pos_x;
+  x_motor_steps = (int32_t)((float)dx*SPMM);
+  Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" x_motor_steps:");Serial.println(x_motor_steps);
+  if(dx > 0)
   {
-    dx = req_pos_x - cur_pos_x;
-    x_motor_steps = (int32_t)((float)dx*SPMM);
-    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" x_motor_steps:");Serial.println(x_motor_steps);
     XdirMotor.setSpeed(x_motor_speed);
   }
-  else if(req_pos_x < cur_pos_x)
+  else if(dx < 0)
   {
-    dx = cur_pos_x - req_pos_x;
-    x_motor_steps = (int32_t)((float)dx*SPMM);
-    x_motor_steps = -x_motor_steps;
-    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" x_motor_steps:");Serial.println(x_motor_steps);
     XdirMotor.setSpeed(-x_motor_speed);
   }
   else
@@ -181,23 +179,18 @@ void MovePrintheadCarriage()
     Serial.println("No x-movement required");
     x_motor_steps = 0;
   }
-  //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
-  if(req_pos_y > cur_pos_y)
+  
+  //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by y_motor_steps
+  dy = req_pos_y - cur_pos_y;
+  y_motor_steps = (int32_t)((float)dy*SPMM);
+  Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" y_motor_steps:");Serial.println(y_motor_steps);
+  if(dy > 0)
   {
-    dy = req_pos_y - cur_pos_y;
-    y_motor_steps = (int32_t)((float)dy*SPMM);
-    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" y_motor_steps:");Serial.println(y_motor_steps);
     YdirMotor.setSpeed(y_motor_speed);
-    //ConfigYdirMotorToMoveForward();
   }
-  else if(req_pos_y < cur_pos_y)
+  else if(dy < 0)
   {
-    dy = cur_pos_y - req_pos_y;
-    y_motor_steps = (int32_t)((float)dy*SPMM);
-    y_motor_steps = -y_motor_steps;
-    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" y_motor_steps:");Serial.println(y_motor_steps);
     YdirMotor.setSpeed(-y_motor_speed);
-    //ConfigYdirMotorToMoveBackward();
   }
   else
   {
@@ -265,7 +258,7 @@ void SetMotorsAcceleration()
 
 void SetupMotors()
 {
-  Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
+  //Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
   XdirMotor.setMaxSpeed(CFG_MOTORS_MAXSPEED);
   YdirMotor.setMaxSpeed(CFG_MOTORS_MAXSPEED);
  // Serial.print("Setting Motors Max Acceleration to: ");Serial.println(CFG_MOTORS_MAXACCEL);
