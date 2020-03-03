@@ -13,11 +13,11 @@ void setup(void)
   SetupVariables();
   SetupSerial(); //Setup debug/console and command serial ports
   SetupPins();
-  MovePrintheadToHome();//to (x,y)=(0,0)
   SetupMotors(); //Setup stepper motors 
+  MovePrintheadToHome();//to (x,y)=(0,0)
   if(SelfTest() == P3RP_SUCCESS)     //call self test routine
   {
-    Serial.println("Carriage Controller Ready!!!");
+    Serial.println("Printhead Carriage Controller Ready!!!");
   }
 }
 
@@ -37,13 +37,14 @@ void loop(void)
     ProcessCommand();
   }
   RunMotors();
+  //delay(3000);
 }
 // ******************** Sub routunes start here **********************
 void SetupVariables()
 {
   memset(cmd_buf,0,CMD_BUF_SZ+1);
-  pos_x_max = 750; //75cm
-  pos_y_max = 600; //60cm
+  pos_x_max = POS_X_MAX;
+  pos_y_max = POS_Y_MAX;
   cur_pos_x = 0; //current x position of the carriage in the layout
   cur_pos_y = 0; //current y position of the carriage in the layout
   req_pos_x = 0; //requested new position x of the carriage in the layout
@@ -64,33 +65,34 @@ void SetupPins()
 {
   digitalWrite(ENDIS_MOTORS_PIN, LOW); //X,Y motors Enable = LOW (EN is active low)
   pinMode(ENDIS_MOTORS_PIN, OUTPUT);
-  pinMode(X_HOME_DETECT_PIN,INPUT);    //printhead home position x switch pin as input to read switch status
-  pinMode(Y_HOME_DETECT_PIN,INPUT);    //printhead home position y switch pin as input to read switch status
+  pinMode(X0_SENSOR_PIN,INPUT);    //printhead home position x switch pin as input to read switch status
+  pinMode(Y0_SENSOR_PIN,INPUT);    //printhead home position y switch pin as input to read switch status
 }
 
 void MovePrintheadToHome()
 {
-  XdirMotor.moveTo(-XMOTOR_MAX_STEPS);
-  YdirMotor.moveTo(-YMOTOR_MAX_STEPS);
-  XdirMotor.setSpeed(x_motor_speed);
-  YdirMotor.setSpeed(y_motor_speed);
-  while((XdirMotor.distanceToGo() >= 0)||(YdirMotor.distanceToGo() >= 0))
+  XdirMotor.setSpeed(-x_motor_speed);
+  YdirMotor.setSpeed(-y_motor_speed);
+  //Serial.print("x motor speed: ");Serial.print(x_motor_speed);Serial.print(" y motor speed: ");Serial.println(y_motor_speed);
+  while(XdirMotor.currentPosition() <= 0)
   {
-    if(digitalRead(X_HOME_DETECT_PIN) == LOW)
+    if(digitalRead(X0_SENSOR_PIN))
     {
-      XdirMotor.runSpeed();
+      XdirMotor.setCurrentPosition(0);
+      break;
     }
-    if(digitalRead(Y_HOME_DETECT_PIN) == LOW)
-    {
-      YdirMotor.runSpeed();
-    }
-    if((digitalRead(X_HOME_DETECT_PIN) == HIGH) && (digitalRead(X_HOME_DETECT_PIN) == HIGH))
-    {
-      break;//Printhead reached home position
-    }
-
+    XdirMotor.runSpeed();
   }
-
+  delay(DELAY_BETWEEN_MOVEMENTS);
+  while(YdirMotor.currentPosition() <= 0)
+  {
+   if(digitalRead(Y0_SENSOR_PIN))
+    {
+      YdirMotor.setCurrentPosition(0);
+      break;
+    }
+    YdirMotor.runSpeed();
+  }
 }
 void ProcessCommand(void)
 {
@@ -100,7 +102,7 @@ void ProcessCommand(void)
     case CMD_ENDIS_MOTS:
       EnableDisableMotors();
     case CMD_GOTO: //'G'
-      MoveCarriage();
+      MovePrintheadCarriage();
       break;
     case CMD_SETDIM: //'D'
       SetPrintFrameDimentions();
@@ -116,6 +118,9 @@ void ProcessCommand(void)
       break;
     case CMD_STOP: //'X'
       StopCarriage(); //Emergency stop
+      break;
+    case 'I': //'X'
+      MovePrintheadToHome(); //INITIAL postion
       break;
     default:
       //do nothing
@@ -134,11 +139,10 @@ void SetPrintFrameDimentions()
   pos_y_max = uData.f;                             //get float value  
   Serial.print("Layout Dim x,y (mm): (");Serial.print(pos_x_max);Serial.print(",");Serial.print(pos_y_max);Serial.println(")");    
 }
-void MoveCarriage()
+void MovePrintheadCarriage()
 { 
   uint32_t dx,dy;
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
-  //SetupMotors();
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
   req_pos_x = (uint32_t)uData.f;
@@ -160,39 +164,45 @@ void MoveCarriage()
   if(req_pos_x > cur_pos_x)
   {
     dx = req_pos_x - cur_pos_x;
-    x_motor_steps = (uint32_t)((float)dx*SPMM);
+    x_motor_steps = (int32_t)((float)dx*SPMM);
     Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" x_motor_steps:");Serial.println(x_motor_steps);
-    ConfigXdirMotorToMoveRight();
+    XdirMotor.setSpeed(x_motor_speed);
   }
   else if(req_pos_x < cur_pos_x)
   {
     dx = cur_pos_x - req_pos_x;
-    x_motor_steps = (uint32_t)((float)dx*SPMM);
+    x_motor_steps = (int32_t)((float)dx*SPMM);
+    x_motor_steps = -x_motor_steps;
     Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" x_motor_steps:");Serial.println(x_motor_steps);
-    ConfigXdirMotorToMoveLeft();
+    XdirMotor.setSpeed(-x_motor_speed);
   }
   else
   {
-    Serial.println("No movement required");
+    Serial.println("No x-movement required");
+    x_motor_steps = 0;
   }
   //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
   if(req_pos_y > cur_pos_y)
   {
     dy = req_pos_y - cur_pos_y;
-    y_motor_steps = (uint32_t)((float)dy*SPMM);
+    y_motor_steps = (int32_t)((float)dy*SPMM);
     Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" y_motor_steps:");Serial.println(y_motor_steps);
-    ConfigYdirMotorToMoveForward();
+    YdirMotor.setSpeed(y_motor_speed);
+    //ConfigYdirMotorToMoveForward();
   }
-  else if(req_pos_x < cur_pos_x)
+  else if(req_pos_y < cur_pos_y)
   {
     dy = cur_pos_y - req_pos_y;
-    y_motor_steps = (uint32_t)((float)dy*SPMM);
+    y_motor_steps = (int32_t)((float)dy*SPMM);
+    y_motor_steps = -y_motor_steps;
     Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" y_motor_steps:");Serial.println(y_motor_steps);
-    ConfigYdirMotorToMoveBackward();
+    YdirMotor.setSpeed(-y_motor_speed);
+    //ConfigYdirMotorToMoveBackward();
   }
   else
   {
-    Serial.println("No pending movement.");
+    Serial.println("No y-movement required.");
+    y_motor_steps = 0;
   }
   cur_pos_x = req_pos_x;
   cur_pos_y = req_pos_y;
@@ -258,9 +268,9 @@ void SetupMotors()
   Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
   XdirMotor.setMaxSpeed(CFG_MOTORS_MAXSPEED);
   YdirMotor.setMaxSpeed(CFG_MOTORS_MAXSPEED);
-  Serial.print("Setting Motors Max Acceleration to: ");Serial.println(CFG_MOTORS_MAXACCEL);
-  XdirMotor.setAcceleration(CFG_MOTORS_MAXACCEL);
-  YdirMotor.setAcceleration(CFG_MOTORS_MAXACCEL);
+ // Serial.print("Setting Motors Max Acceleration to: ");Serial.println(CFG_MOTORS_MAXACCEL);
+ // XdirMotor.setAcceleration(CFG_MOTORS_MAXACCEL);
+  //YdirMotor.setAcceleration(CFG_MOTORS_MAXACCEL);
   ResetMotors(); // reset positions to zero  
 }
 
@@ -277,10 +287,17 @@ void StopCarriage() // Cmd format:!3X00000000000000000
  **************************************************************************************************************/
 void RunMotors()
 {
-  if((XdirMotor.distanceToGo() >= 0) || (YdirMotor.distanceToGo() >= 0))
+  //Serial.print("X,Y motors to run steps: ");Serial.print(XdirMotor.distanceToGo());Serial.print(" ");Serial.println(YdirMotor.distanceToGo());
+  if((XdirMotor.distanceToGo() != -x_motor_steps) || (YdirMotor.distanceToGo() != -y_motor_steps))
   {
-    XdirMotor.runSpeed();
-    YdirMotor.runSpeed();
+    if(XdirMotor.distanceToGo() != -x_motor_steps)
+    {
+      XdirMotor.runSpeed();
+    }
+    if(YdirMotor.distanceToGo() != -y_motor_steps)
+    {
+      YdirMotor.runSpeed();
+    }
     ack_nack_sent = false;
   }
   else
@@ -295,7 +312,7 @@ void RunMotors()
                                 //Other commands will finish immediately. No need for master to wait.
       ack_nack_sent = true;     //To send ACK only once per move command
     }
-  }  
+  }
 }
 /****************************************************************************************************************
  * Self test functionality
@@ -361,31 +378,51 @@ void ResetMotors()
 {
   XdirMotor.setCurrentPosition(0);
   YdirMotor.setCurrentPosition(0);
-  Serial.print("Setting X-motor speed to: ");Serial.println(x_motor_speed);
-  XdirMotor.setSpeed(x_motor_speed);
-  Serial.print("Setting Y-motor speed to: ");Serial.println(y_motor_speed);
-  YdirMotor.setSpeed(y_motor_speed);
+//  Serial.print("Setting X-motor speed to: ");Serial.println(x_motor_speed);
+//  XdirMotor.setSpeed(x_motor_speed);
+//  Serial.print("Setting Y-motor speed to: ");Serial.println(y_motor_speed);
+//  YdirMotor.setSpeed(y_motor_speed);
 }
 
 // *********************** Move Subroutines **************
 void ConfigXdirMotorToMoveRight() 
 {
   Serial.println("Configuring to move x->");
-  XdirMotor.moveTo(x_motor_steps);
+  while(XdirMotor.currentPosition()!= x_motor_steps)
+  {
+    XdirMotor.setSpeed(x_motor_speed);//1000);
+    XdirMotor.runSpeed();
+  }
+  //XdirMotor.moveTo(x_motor_steps);
 }
 void ConfigXdirMotorToMoveLeft() 
 {
   Serial.println("Configuring to move <-x");
-  XdirMotor.moveTo(-x_motor_steps);
+  while(XdirMotor.currentPosition()!= -x_motor_steps)
+  {
+    XdirMotor.setSpeed(x_motor_speed);//-1000);
+    XdirMotor.runSpeed();
+  }
+  //XdirMotor.moveTo(-x_motor_steps);
 }
 void ConfigYdirMotorToMoveForward() 
 {
   Serial.println("Configuring to move y↑.");
-  YdirMotor.moveTo(-y_motor_steps);
+  while(YdirMotor.currentPosition()!= y_motor_steps)
+  {
+    YdirMotor.setSpeed(y_motor_speed);//1000);
+    YdirMotor.runSpeed();
+  }
+  //YdirMotor.moveTo(-y_motor_steps);
 }
 void ConfigYdirMotorToMoveBackward() 
 {
   Serial.println("Configuring to move y↓");
-  YdirMotor.moveTo(-y_motor_steps);
+  while(YdirMotor.currentPosition()!= -y_motor_steps)
+  {
+    YdirMotor.setSpeed(-y_motor_speed);//-1000);
+    YdirMotor.runSpeed();
+  }
+  //YdirMotor.moveTo(-y_motor_steps);
 }
  
