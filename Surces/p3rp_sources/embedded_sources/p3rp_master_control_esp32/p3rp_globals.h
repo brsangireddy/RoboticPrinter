@@ -95,14 +95,14 @@ uint16_t hpcX    = 0;     //printerHead Position in Carriage (HPC) at any instan
 uint16_t hpcY    = 0;     //printerHead Position in Carriage (HPC) at any instance in Y directions 
 uint32_t cplXmax = 91440; //Carriage Position in Layout (CPL) maximum in X direction 300' (feet) (Plan to cover 300'X300' area)
 uint32_t cplYmax = 91440; //Carriage Position in Layout (CPL) maximum in Y direction 300' (feet) (Plan to cover 300'X300' area)
-uint32_t hpcXmax = 762;   //Maximum Head Position in Carriage (millimeters) in X-direction
-uint16_t hpcYmax = 610;   //Maximum Head Position in Carriage (millimeters) in Y-direction
+float hpcXmax = 457.2;//640;   //Maximum Head Position in Carriage (millimeters) in X-direction
+float hpcYmax = 304.8;//380;   //Maximum Head Position in Carriage (millimeters) in Y-direction
 char pos_val_unit = DFLT_UNIT;
 char segfile_name[] = "jjxxxyyy.gcd";//jj:job code/id 2 chars, xxx:segment number in x-direction 000-999,yyy:segment number in y direction 000-999, gcd:GCoDe
 char segfile_path_name[]="/jjxxxyyyy.gcd";
 //char segfile_path_name[]="/p3rp_layout_files/gcode/jjxxxyyyy.gcd";
 #define FILE_NAME_START_INDX 0//24
-#define FILE_NAME_SZ 14 //one character
+#define FILE_NAME_SZ 14 //one character for '/', 8 characters for name, one for '.', 3 for extension 'gcd', 1 for null termination
 
 IPAddress ftp_server(192,168,0,3);//FTP server IP address
 #define FTP_PORT 21
@@ -113,8 +113,11 @@ WebServer httpserver(80); //accessed by all the modules
 WiFiClient client;  //for connection
 WiFiClient dclient; //for reading/writing data over ftp
 
-#define X_MOTION '1'
-#define Y_MOTION '2'
+#define X_MOTION '1'//0x31
+#define Y_MOTION '2'//0x32
+
+#define RESULT_SUCCESS 1
+#define RESULT_ERROR   0
 
 void SelectSerialPort(uint8_t);
 

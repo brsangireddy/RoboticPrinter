@@ -6,10 +6,17 @@
 void ConfigurePortPins();
 void ConfigureWiFi();
 void ConfigureHttpServer();
+//http server handler functions
 void HndRoot();
 void HndNotFound();
 void HndDisplayFileListCmd();
 void HndDeleteFilesCmd();
+
+uint8_t ProcessPrintSegmentCmd();
+uint8_t DownloadSegmentFile();
+void eFail();
+uint8_t readServerResp();
+uint8_t DownloadSegmentFile();
 
 struct strSysConfig {
   String  ssid;
@@ -69,6 +76,58 @@ void ConfigureWiFi()
   }
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP( AP_DISP_NAME , AP_PASSWORD);
+}
+/*********************************************************************************************
+ * Make S1,S2,S3 pins HIGH/LOW depending on the port number selected
+ *********************************************************************************************/
+void SelectSerialPort(uint8_t port_num)
+{
+  switch(port_num)
+  {
+    case 1:
+      digitalWrite(SP_S1,LOW);
+      digitalWrite(SP_S2,LOW);
+      digitalWrite(SP_S3,LOW);
+      break;
+    case 2:
+      digitalWrite(SP_S1,HIGH);
+      digitalWrite(SP_S2,LOW);
+      digitalWrite(SP_S3,LOW);
+      break;
+    case 3:
+      digitalWrite(SP_S1,LOW);
+      digitalWrite(SP_S2,HIGH);
+      digitalWrite(SP_S3,LOW);
+      break;
+    case 4:
+      digitalWrite(SP_S1,HIGH);
+      digitalWrite(SP_S2,HIGH);
+      digitalWrite(SP_S3,LOW);
+      break;
+    case 5:
+      digitalWrite(SP_S1,LOW);
+      digitalWrite(SP_S2,LOW);
+      digitalWrite(SP_S3,HIGH);
+      break;
+    case 6:
+      digitalWrite(SP_S1,HIGH);
+      digitalWrite(SP_S2,LOW);
+      digitalWrite(SP_S3,HIGH);
+      break;
+    case 7:
+      digitalWrite(SP_S1,LOW);
+      digitalWrite(SP_S2,HIGH);
+      digitalWrite(SP_S3,HIGH);
+      break;
+    case 8:
+      digitalWrite(SP_S1,HIGH);
+      digitalWrite(SP_S2,HIGH);
+      digitalWrite(SP_S3,HIGH);
+      break;
+    default:
+      Serial.println("Invalid port number.");
+      break;
+  }
 }
 
 /*********************************************************************************************
@@ -180,55 +239,241 @@ void HndNotFound()
   httpserver.send(404, "text/plain", message);
 }
 
-/*********************************************************************************************
- * Make S1,S2,S3 pins HIGH/LOW depending on the port number selected
- *********************************************************************************************/
-void SelectSerialPort(uint8_t port_num)
+void HndPrintSegmentCmd()
 {
-  switch(port_num)
+  uint8_t result;
+  char resp_str[120]={0,};
+
+  for(uint8_t i=0; i<httpserver.args(); i++)
   {
-    case 1:
-      digitalWrite(SP_S1,LOW);
-      digitalWrite(SP_S2,LOW);
-      digitalWrite(SP_S3,LOW);
-      break;
-    case 2:
-      digitalWrite(SP_S1,HIGH);
-      digitalWrite(SP_S2,LOW);
-      digitalWrite(SP_S3,LOW);
-      break;
-    case 3:
-      digitalWrite(SP_S1,LOW);
-      digitalWrite(SP_S2,HIGH);
-      digitalWrite(SP_S3,LOW);
-      break;
-    case 4:
-      digitalWrite(SP_S1,HIGH);
-      digitalWrite(SP_S2,HIGH);
-      digitalWrite(SP_S3,LOW);
-      break;
-    case 5:
-      digitalWrite(SP_S1,LOW);
-      digitalWrite(SP_S2,LOW);
-      digitalWrite(SP_S3,HIGH);
-      break;
-    case 6:
-      digitalWrite(SP_S1,HIGH);
-      digitalWrite(SP_S2,LOW);
-      digitalWrite(SP_S3,HIGH);
-      break;
-    case 7:
-      digitalWrite(SP_S1,LOW);
-      digitalWrite(SP_S2,HIGH);
-      digitalWrite(SP_S3,HIGH);
-      break;
-    case 8:
-      digitalWrite(SP_S1,HIGH);
-      digitalWrite(SP_S2,HIGH);
-      digitalWrite(SP_S3,HIGH);
-      break;
-    default:
-      Serial.println("Invalid port number.");
-      break;
+    if(httpserver.argName(i) == "segfile")
+    {
+      strcpy(resp_str,"PrintSegment ");
+      strcat(resp_str, httpserver.arg(i).c_str());
+      strcpy(segfile_name, "/");
+      strcat(segfile_name, httpserver.arg(i).c_str());
+      strcpy(segfile_path_name,segfile_name);
+      //strcpy(&segfile_path_name[FILE_NAME_START_INDX],segfile_name);
+    }
+  }
+  result = ProcessPrintSegmentCmd();
+  if(result == RESULT_SUCCESS)
+  {
+    strcat(resp_str," command sent to printhead control module successfully.");
+    httpserver.send(200, "text/html", resp_str);  
+  }
+  else
+  {
+    strcat(resp_str, "command FAILED");
+    httpserver.send(400, "text/html", resp_str);  
   }
 }
+
+uint8_t ProcessPrintSegmentCmd()
+{
+  uint8_t result;
+  int32_t x_seg = 0;
+  int32_t y_seg = 0;
+  String file_name = "/jjxxxyyy.gcd";//dummy file name, resembles segment gcode file name
+  char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 for holding null char
+
+  result = DownloadSegmentFile();
+  if(result == RESULT_SUCCESS)//when the file is successfully downloaded
+  {
+    for(int i=0; i<(FILE_NAME_SZ-1);i++)
+    {
+      file_name[i] = segfile_name[i];
+    }
+    Serial.println(file_name);
+    x_seg = file_name.substring(3,6).toInt();
+    y_seg = file_name.substring(6,9).toInt();
+    Serial.print("x,y segment numbers: ");Serial.print(x_seg);Serial.print(",");Serial.println(y_seg);
+
+    car_posX_rotDeg = x_seg * hpcXmax;
+    car_posY_rotMin = y_seg * hpcYmax;
+    Serial.print("Carriage to be moved to new x,y: ");Serial.print(car_posX_rotDeg);Serial.print(",");Serial.println(car_posY_rotMin);
+
+    //Send command to carriage control unit to move the carriage to desired segment to be printed
+    SelectSerialPort(CARRIAGE_COM_PORT);
+    
+    cmd_buf[INDX_SOCF] = SOCF;               //Start of command or command qualifier
+    cmd_buf[INDX_TGT]  = TGT_CARRIAGE_CON; //Target's ASCII value '3'  
+    cmd_buf[INDX_CMD]  = CMD_GOTO;        //Command type - goto command
+    cmd_buf[INDX_MODE] = UNIT_MM;
+    
+    uData.f = car_posX_rotDeg;
+    sprintf(&cmd_buf[INDX_VAL1],"%08X",(uint32_t)uData.i);
+    uData.f = car_posY_rotMin;
+    sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i);  
+    Serial.println(cmd_buf); //Print for local debugging 
+    //Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ);//Send command string to carriage control module
+
+    //****************wait until the carriage moves to desired segment
+    result = PrintSegment(); //handled by printhead control unit for printing.
+  }
+  return result;  
+}
+
+char outbuf[128];
+char outcount;
+
+uint8_t DownloadSegmentFile()
+{
+  File rdfh; //Receive Data File Handle for writing to the device
+    
+  if(client.connect(ftp_server, FTP_PORT)) //connect to ftp server
+  { 
+    Serial.println(F("Connected to FTP server"));
+  } 
+  else
+  {
+    Serial.println(F("Command connection failed"));
+    return 0;
+  }  
+  if(!readServerResp()) return 0;
+
+  Serial.println("Send USER");
+  client.println("USER ftp");
+  if (!readServerResp()) return 0;
+  
+  Serial.println("Send PASSWORD");
+  client.println("PASS guest");
+  if(!readServerResp()) return 0;
+
+  client.println(F("SYST"));
+  if(!readServerResp()) return 0;
+
+  client.println(F("Type I"));
+  if(!readServerResp()) return 0;
+  
+  client.println(F("PASV"));
+  if (!readServerResp()) return 0;
+
+  char *tstr = strtok(outbuf, "(,");
+  int array_pasv[6];
+  for ( int i = 0; i < 6; i++)
+  {
+    tstr = strtok(NULL, "(,");
+    array_pasv[i] = atoi(tstr);
+    if (tstr == NULL)
+    {
+      Serial.println(F("Bad PASV Answer"));
+    }
+  }
+  unsigned int hiport, loport;
+  hiport = array_pasv[4] << 8;
+  loport = array_pasv[5] & 255;
+
+  Serial.print(F("Data port: "));
+  hiport = hiport | loport;
+  Serial.println(hiport);
+
+  if(dclient.connect(ftp_server, hiport))
+  {
+    Serial.println(F("Data connected"));
+  }
+  else
+  {
+    Serial.println(F("Data connection failed"));
+    client.stop();
+    return 0;
+  }
+
+  Serial.println("Send RETR filename");
+  client.print(F("RETR "));
+  Serial.println(&segfile_path_name[1]);
+  client.println(&segfile_path_name[1]);
+  if (!readServerResp())
+  {
+    dclient.stop();
+    return 0;
+  }
+
+  Serial.println(F("Reading Segment File..."));
+  Serial.println(segfile_path_name);
+
+  rdfh = SPIFFS.open(segfile_name,"w");//open file for writing
+  if(!rdfh)
+  {
+    dclient.stop();
+    Serial.println(F("SPIFFS file open failed."));
+    return 0;
+  }
+  else
+  {
+    while(dclient.connected())
+    {
+      while(dclient.available())
+      {
+        char ch = dclient.read();
+        rdfh.write(ch);
+        Serial.print(ch);
+      }
+    }
+  }
+
+  dclient.stop();
+  Serial.println(F("Data client disconnected"));
+  if(!readServerResp()) return 0;
+
+  client.println(F("QUIT"));
+  if(!readServerResp()) return 0;
+
+  client.stop();
+  Serial.println(F("Comm client disconnected"));
+
+  rdfh.close();
+  Serial.print(segfile_name);Serial.println(" download complete.");
+  return 1;
+}
+
+void efail() 
+{
+  byte thisbyte = 0;
+
+  client.println(F("QUIT"));
+
+  while (!client.available()) delay(1);
+
+  while (client.available())
+  {
+    thisbyte = client.read();
+    Serial.write(thisbyte);
+  }
+
+  client.stop();
+  Serial.println(F("Command disconnected"));
+}// efail
+
+/*
+ * readServerResp()
+ */
+uint8_t readServerResp() 
+{
+  byte respcode;
+  byte thisbyte;
+
+  while (!client.available()) delay(1);
+  respcode = client.peek();
+  outcount = 0;
+
+  while (client.available())
+  {
+    thisbyte = client.read();
+    Serial.write(thisbyte);
+
+    if (outcount < 127)
+    {
+      outbuf[outcount] = thisbyte;
+      outcount++;
+      outbuf[outcount] = 0;
+    }
+  }
+
+  if (respcode >= '4')
+  {
+    efail();
+    return 0;
+  }
+  return 1;
+}// readServerResp()
