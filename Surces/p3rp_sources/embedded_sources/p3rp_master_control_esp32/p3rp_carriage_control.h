@@ -9,7 +9,7 @@ float car_mov_dist    = 0;
 float car_posX_rotDeg = 0;
 float car_posY_rotMin = 0;
 
-void hndCarriageControlCmd();
+void HndCarriageControlCmd();
 void ProcessCarriageControlCmd();
 
 /*********************************************************************************************
@@ -19,7 +19,7 @@ void ProcessCarriageControlCmd();
  * /CarriageControl?cmd=Rotate&deg=75&min=30&dir=CW    (deg=0-359,min=0-59,
  *                                                      dir=Clockwise(CW)/Anticlockwise(ACW)
  *********************************************************************************************/
-void hndCarriageControlCmd()
+void HndCarriageControlCmd()
 {
   car_con_cmd     = CMD_UNKNOWN;
   car_rot_dir     = DIR_CLOCKWISE;

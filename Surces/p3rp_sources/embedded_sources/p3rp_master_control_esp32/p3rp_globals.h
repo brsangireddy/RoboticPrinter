@@ -5,9 +5,17 @@
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <FS.h>
+#include <SPIFFS.h>
 
+#if 1
 #define SSID "BETABULLS1"
 #define PWD "1234@bulls"
+#else
+#define SSID "1stfloor-2.4ghz"
+#define PWD "Tata@4321"
+#endif
+
 #define AP_DISP_NAME  "p3rp_controller"
 #define AP_PASSWORD "12345678"
 
@@ -46,6 +54,9 @@
 #define CMD_SETDIM  'D' //length & breadth set by control panel software (running on the tab/laptop) after loading the layout to it
 #define CMD_GOTO    'G' //Goto x,y position (CMD='G', MODE='m'/'c'/'i'/'f'/'M', VAL1=x, VAL2=y in command string to target
                         //'m'=mm,'c'=cm,'i'=inches,'f'=foot, 'M'=meter
+#define CMD_MOVE    'M' //Move distances in x,y direction from the current position
+                        //(CMD='M', MODE='1'/'2'/'3' ('1':X-movement only, '2':y-movement only, '3':both x-movement & y-movement)
+                        //VAL1=x-distance(mm), VAL2=y-ditance (mm) in command string to target
 #define CMD_ROTATE  'R' //Clockwise/Anticlockwise, deg, min (CMD='R', MODE='A'/'C' (AntiCW/Clockwise), VAL1=deg, VAL2=min in command string)
 #define CMD_UNKNOWN 'U' //Unknown command
 
@@ -87,7 +98,24 @@ uint32_t cplYmax = 91440; //Carriage Position in Layout (CPL) maximum in Y direc
 uint32_t hpcXmax = 762;   //Maximum Head Position in Carriage (millimeters) in X-direction
 uint16_t hpcYmax = 610;   //Maximum Head Position in Carriage (millimeters) in Y-direction
 char pos_val_unit = DFLT_UNIT;
+char segfile_name[] = "jjxxxyyy.gcd";//jj:job code/id 2 chars, xxx:segment number in x-direction 000-999,yyy:segment number in y direction 000-999, gcd:GCoDe
+char segfile_path_name[]="/jjxxxyyyy.gcd";
+//char segfile_path_name[]="/p3rp_layout_files/gcode/jjxxxyyyy.gcd";
+#define FILE_NAME_START_INDX 0//24
+#define FILE_NAME_SZ 14 //one character
+
+IPAddress ftp_server(192,168,0,3);//FTP server IP address
+#define FTP_PORT 21
+char ftp_user[32] = "ftp";
+char ftp_pwd[32] = "guest";
+
 WebServer httpserver(80); //accessed by all the modules
+WiFiClient client;  //for connection
+WiFiClient dclient; //for reading/writing data over ftp
+
+#define X_MOTION '1'
+#define Y_MOTION '2'
+
 void SelectSerialPort(uint8_t);
 
 union 

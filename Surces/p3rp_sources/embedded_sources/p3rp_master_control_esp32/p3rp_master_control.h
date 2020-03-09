@@ -6,9 +6,10 @@
 void ConfigurePortPins();
 void ConfigureWiFi();
 void ConfigureHttpServer();
-void hndRoot();
-void hndNotFound();
-
+void HndRoot();
+void HndNotFound();
+void HndDisplayFileListCmd();
+void HndDeleteFilesCmd();
 
 struct strSysConfig {
   String  ssid;
@@ -75,25 +76,93 @@ void ConfigureWiFi()
  *********************************************************************************************/
 void ConfigureHttpServer()
 {
-  httpserver.on("/", hndRoot);
-  httpserver.on("/CarriageControl", hndCarriageControlCmd);
-  httpserver.on("/PrintHeadControl",hndPrintHeadControlCmd);
-  httpserver.onNotFound(hndNotFound);
+  httpserver.on("/", HndRoot);
+  httpserver.on("/CarriageControl",HndCarriageControlCmd);
+  httpserver.on("/PrintHeadControl",HndPrintHeadControlCmd);
+  httpserver.on("/PrintSegment", HndPrintSegmentCmd);
+  httpserver.on("/DisplayFileList", HndDisplayFileListCmd);
+  httpserver.on("/DeleteFiles", HndDeleteFilesCmd);  
+  httpserver.onNotFound(HndNotFound);
   httpserver.begin();
   Serial.println("http server started");
 }
 
+ void HndDisplayFileListCmd()
+ {
+    String ibuf    = "";
+    uint32_t fsize = 0;
+    int fcnt       = 0;
+    String fname   = "";
+    boolean filefound = false;
+    File rdh; //root dir handle
+    ibuf += "<form method='GET'>";
+    ibuf += "<table border='1' cellspacing='0' cellpadding='0'>";
+    ibuf += "<tr bgcolor='#DDDDDD' ><td><strong>S#</strong></td><td align='center'><strong>Name</strong></td><td><strong>Size</strong></td><tr>";
+    rdh = SPIFFS.open("/"); //display all files from /edata dir
+    if(!rdh)
+    {
+      Serial.println("Open root dir failed.");
+      return;
+    }
+    File fh = rdh.openNextFile();
+    while(fh)
+    {
+      fcnt++;      
+      fname = fh.name();
+      filefound = true;
+      fsize = fh.size(); 
+      ibuf += "<tr><td>" + String(fcnt) + "</td><td>" + String(fname) + "</td><td>" + String(fsize) + "</td></tr>";
+      Serial.println(fname);
+      fh = rdh.openNextFile();
+    } //while
+    if (filefound == false)
+    {
+       //no file    
+       ibuf = "No File(s) Found.";
+    }
+    else
+    {
+      ibuf += "</table>";
+      ibuf += "</form>";
+    }
+      
+    httpserver.send(200, "text/html", ibuf);    
+ }
+
+void HndDeleteFilesCmd()
+{
+  File rdh; //root dir handle
+  String ibuf = "";
+  int fcnt    = 0;
+  rdh = SPIFFS.open("/"); //display all files from /edata dir
+  if(!rdh)
+  {
+    Serial.println("Open root dir failed.");
+    ibuf = "Open root dir failed.";
+    httpserver.send(200, "text/html", ibuf);      
+    return;
+  }
+  File fh = rdh.openNextFile();
+  while(fh)
+  {
+    fcnt++;      
+    SPIFFS.remove(fh.name());
+    fh = rdh.openNextFile();
+  } //while
+  ibuf = "Deleted " + String(fcnt)+ " file(s)";
+  httpserver.send(200, "text/html", ibuf);      
+}
 /*********************************************************************************************
  * 
  *********************************************************************************************/
-void hndRoot()
+void HndRoot()
 {
   httpserver.send(200, "text/html", "ok");
 }
 /*********************************************************************************************
  * 
  *********************************************************************************************/
-void hndNotFound()
+void HndNotFound()
 {
   String message = "File Not Found\n\n";
   message += "URI: ";
