@@ -17,62 +17,62 @@ xsegmax = layoutxmax //seglen
 ysegmax = layoutymax // segwidth
 #print(xsegmax,ysegmax)
 PIby180 = 3.1459/180
-CircleStartA = 0
-CircleEndA = 361
-XMAX = 0
-XMIN = 0
-YMAX = 0
-YMIN = 0
-filexylen = 3
+quantity  = 10000000
+circlestartangle = 0
+circleendangle = 361
+xmax = 0
+xmin = 0
+ymax = 0
+ymin = 0
+xylenforfile = 3
 checkinpolygcode = 0
 avoidrepeatedaction = 0
 ########## gcode variable ##################
-Gcode = ""
-gcodefilecount = 0
+gcode = ""
+gcodefilescount = 0
 
 #LINE Buffer and Varibles
-QTY  = 10000000
-XSTART = [0 for i in range(QTY)]
-YSTART = [0 for i in range(QTY)]
-XEND   = [0 for i in range(QTY)]
-YEND   = [0 for i in range(QTY)]
-LINECOUNT	= 1
+xstart = [0 for i in range(quantity)]
+ystart = [0 for i in range(quantity)]
+xend   = [0 for i in range(quantity)]
+yend   = [0 for i in range(quantity)]
+linecount	= 1
 
 #CIRCLE Buffer and varibles
-XCIRCLEPOS  = [0 for i in range(QTY)]
-YCIRCLEPOS  = [0 for i in range(QTY)]
-ZCIRCLEPOS   = [0 for i in range(QTY)]
-CIRCLERADIUS = [0 for i in range(QTY)]
-CIRCLECOUNT	= 1
+circlexpos  = [0 for i in range(quantity)]
+circleypos  = [0 for i in range(quantity)]
+circlezpos   = [0 for i in range(quantity)]
+circleradius = [0 for i in range(quantity)]
+circlecount	= 1
 CCount = 1
-circlestartx = [0 for i in range(QTY)]
-circlestarty = [0 for i in range(QTY)]
-circleendx = [0 for i in range(QTY)]
-circleendy = [0 for i in range(QTY)]
+circlestartx = [0 for i in range(quantity)]
+circlestarty = [0 for i in range(quantity)]
+circleendx = [0 for i in range(quantity)]
+circleendy = [0 for i in range(quantity)]
 #ARC Buffer and varibles
-StartAngle   = [0 for i in range(QTY)]
-EndAngle   = [0 for i in range(QTY)] 
-ARC_CenterX   = [0 for i in range(QTY)]
-ARC_CenterY   = [0 for i in range(QTY)]
-ZARK   = [0 for i in range(QTY)]
-ARKRADIUS = [0 for i in range(QTY)]
-ARKCOUNT    = 1
+startangle   = [0 for i in range(quantity)]
+endangle   = [0 for i in range(quantity)] 
+arcxcenter   = [0 for i in range(quantity)]
+arcycenter   = [0 for i in range(quantity)]
+zarc   = [0 for i in range(quantity)]
+arcradius = [0 for i in range(quantity)]
+arccount    = 1
 ACount = 1
-arcstartx = [0 for i in range(QTY)]
-arcstarty = [0 for i in range(QTY)]
-arcendx = [0 for i in range(QTY)]
-arcendy = [0 for i in range(QTY)]
+arcstartx = [0 for i in range(quantity)]
+arcstarty = [0 for i in range(quantity)]
+arcendx = [0 for i in range(quantity)]
+arcendy = [0 for i in range(quantity)]
 #POLYLINE Buffer and Varibles
-XPOLYSTART = [0 for i in range(QTY)]
-YPOLYSTART = [0 for i in range(QTY)]
-XPOLYEND   = [0 for i in range(QTY)]
-YPOLYEND   = [0 for i in range(QTY)]
-POLYLINECOUNT = 1
+xpolystart = [0 for i in range(quantity)]
+ypolystart = [0 for i in range(quantity)]
+polylinecount = 1
 PLCount =1
-polystartx = [0 for i in range(QTY)]
-polystarty = [0 for i in range(QTY)]
-ployendx = [0 for i in range(QTY)]
-polyendy = [0 for i in range(QTY)]
+polystartx = [0 for i in range(quantity)]
+polystarty = [0 for i in range(quantity)]
+polyendx = [0 for i in range(quantity)]
+polyendy = [0 for i in range(quantity)]
+xpolypresentpos = 0
+ypolypresentpos = 0
 
 DXFPATH, DXFNAME = os.path.split(openfile)
 
@@ -81,191 +81,191 @@ DXFPATH, DXFNAME = os.path.split(openfile)
 file = open(openfile,errors='ignore')
 while True: #### Main DXF read loop ####
 	
-	TEXT = file.readline()
-	TEXT = TEXT.strip() # Remove spaces 
-	#print(TEXT)
-	'''if(TEXT == '$INSUNITS'):
+	filereadline = file.readline()
+	filereadline = filereadline.strip() # Remove spaces 
+	#print(filereadline)
+	'''if(filereadline == '$INSUNITS'):
 		while True:			
-			TEXT = file.readline()
-			TEXT = TEXT.strip()
-			print (TEXT)
-			TEXT = file.readline()
-			TEXT = TEXT.strip()
-			print("dimension type:",TEXT)
+			filereadline = file.readline()
+			filereadline = filereadline.strip()
+			print (filereadline)
+			filereadline = file.readline()
+			filereadline = filereadline.strip()
+			print("dimension type:",filereadline)
 			
 					
 			break
 		break'''
 	############## LINE #####################
-	if (TEXT == "AcDbLine"): # Found line
-		#LINECOUNT = 1
+	if (filereadline == "AcDbLine"): # Found line
+		#linecount = 1
 		while True:
-			TEXT = file.readline() # Read identifier
-			TEXT = TEXT.strip()
-			#print(TEXT)
-			if (TEXT == "10"): 
-				TEXT = file.readline() # Read X start poosition
-				TEXT = TEXT.strip()
-				XSTART[LINECOUNT]= float(TEXT)
-				TEXT="NOTHING"
+			filereadline = file.readline() # Read identifier
+			filereadline = filereadline.strip()
+			#print(filereadline)
+			if (filereadline == "10"): 
+				filereadline = file.readline() # Read X start poosition
+				filereadline = filereadline.strip()
+				xstart[linecount]= float(filereadline)
+				filereadline="NOTHING"
 			
-			if (TEXT == "20"): 
-				TEXT = file.readline() # Read Y start poosition
-				TEXT = TEXT.strip()
-				YSTART[LINECOUNT]= float(TEXT)
-				TEXT = "NOTHING"
+			if (filereadline == "20"): 
+				filereadline = file.readline() # Read Y start poosition
+				filereadline = filereadline.strip()
+				ystart[linecount]= float(filereadline)
+				filereadline = "NOTHING"
 
-			if (TEXT == "11"): 
-				TEXT = file.readline() # Read X end poosition
-				TEXT = TEXT.strip()
-				XEND[LINECOUNT]= float(TEXT)
-				TEXT = "NOTHING"
+			if (filereadline == "11"): 
+				filereadline = file.readline() # Read X end poosition
+				filereadline = filereadline.strip()
+				xend[linecount]= float(filereadline)
+				filereadline = "NOTHING"
 			
-			if (TEXT == "21"): 
-				TEXT = file.readline() # Read Y end poosition
-				TEXT = TEXT.strip()
-				#print("..........................LINE..........",TEXT)
-				YEND[LINECOUNT]= float(TEXT)
-				TEXT = "NOTHING"
+			if (filereadline == "21"): 
+				filereadline = file.readline() # Read Y end poosition
+				filereadline = filereadline.strip()
+				#print("..........................LINE..........",filereadline)
+				yend[linecount]= float(filereadline)
+				filereadline = "NOTHING"
 			
-			if (TEXT == "0"): # No more data
-				if (XSTART[LINECOUNT] > XMAX): XMAX = XSTART[LINECOUNT]
-				if (YSTART[LINECOUNT] < YMIN): YMIN = YSTART[LINECOUNT]
-				if (YEND[LINECOUNT] > YMAX): YMAX = YEND[LINECOUNT]
-				if (XEND[LINECOUNT] < XMIN): XMIN = XEND[LINECOUNT]
+			if (filereadline == "0"): # No more data
+				if (xstart[linecount] > xmax): xmax = xstart[linecount]
+				if (ystart[linecount] < ymin): ymin = ystart[linecount]
+				if (yend[linecount] > ymax): ymax = yend[linecount]
+				if (xend[linecount] < xmin): xmin = xend[linecount]
 				
-				LINECOUNT = LINECOUNT + 1
+				linecount = linecount + 1
 				break
 	############## CIRCLE and ARC #####################
-	if (TEXT == "AcDbCircle"): # Found circle
-		CIRCLECOUNT = 1
+	if (filereadline == "AcDbCircle"): # Found circle
+		circlecount = 1
 		conditionbreakflag = 0
 		while True:
-			print(TEXT)
-			TEXT = file.readline() # Read identifier
-			TEXT = TEXT.strip()
-			#print(">>>>>>>>>>>>CIRCLE>>>>>>>>>>>>>>>>>",TEXT)
+			print(filereadline)
+			filereadline = file.readline() # Read identifier
+			filereadline = filereadline.strip()
+			#print(">>>>>>>>>>>>CIRCLE>>>>>>>>>>>>>>>>>",filereadline)
 			
-			if (TEXT == "10"): 
-				TEXT = file.readline() # Read X centre poosition
-				TEXT = TEXT.strip()
-				#print(">>>>>>>>>>>>CIRCLE TEXT of X-AXIS>>>>>>>>>>>>>>>>>",TEXT)
-				XCIRCLEPOS[CIRCLECOUNT]= float(TEXT)
-				TEXT = "NOTHING"
+			if (filereadline == "10"): 
+				filereadline = file.readline() # Read X centre poosition
+				filereadline = filereadline.strip()
+				#print(">>>>>>>>>>>>CIRCLE filereadline of X-AXIS>>>>>>>>>>>>>>>>>",filereadline)
+				circlexpos[circlecount]= float(filereadline)
+				filereadline = "NOTHING"
 			
-			if (TEXT == "20"): 
-				TEXT = file.readline() # Read Y centre poosition
-				TEXT = TEXT.strip()
-				#print(">>>>>>>>>>>>>>CIRCLE TEXT of Y-AXIS>>>>>>>>>>>>>>>",TEXT)
-				YCIRCLEPOS[CIRCLECOUNT]= float(TEXT)
-				TEXT = "NOTHING"
+			if (filereadline == "20"): 
+				filereadline = file.readline() # Read Y centre poosition
+				filereadline = filereadline.strip()
+				#print(">>>>>>>>>>>>>>CIRCLE filereadline of Y-AXIS>>>>>>>>>>>>>>>",filereadline)
+				circleypos[circlecount]= float(filereadline)
+				filereadline = "NOTHING"
 			
-			if (TEXT == "30"):
-				TEXT = file.readline() # Read Z centre poosition
-				TEXT = TEXT.strip()
-				#print(">>>>>>>>>>>>>>CIRCLE TEXT of Z-AXIS>>>>>>>>>>>>>>>",TEXT)
-				ZCIRCLEPOS[CIRCLECOUNT] = float(TEXT)
-				TEXT = "NOTHING"							
+			if (filereadline == "30"):
+				filereadline = file.readline() # Read Z centre poosition
+				filereadline = filereadline.strip()
+				#print(">>>>>>>>>>>>>>CIRCLE filereadline of Z-AXIS>>>>>>>>>>>>>>>",filereadline)
+				circlezpos[circlecount] = float(filereadline)
+				filereadline = "NOTHING"							
 			
-			if (TEXT == "40"): 
-				TEXT = file.readline() # Read Circele Radius
-				TEXT = TEXT.strip()
-				#print(">>>>>>>>>>>>>>CIRCLE RADIUS >>>>>>>>>>>>>>>",TEXT)
-				CIRCLERADIUS[CIRCLECOUNT]= float(TEXT)
-				#if CIRCLERADIUS[CIRCLECOUNT] > CIRCLERAD : BIGCOUNT = BIGCOUNT + 1
-				TEXT = "NOTHING"
-			if(TEXT == "210"):
+			if (filereadline == "40"): 
+				filereadline = file.readline() # Read Circele Radius
+				filereadline = filereadline.strip()
+				#print(">>>>>>>>>>>>>>CIRCLE RADIUS >>>>>>>>>>>>>>>",filereadline)
+				circleradius[circlecount]= float(filereadline)
+				#if circleradius[circlecount] > CIRCLERAD : BIGCOUNT = BIGCOUNT + 1
+				filereadline = "NOTHING"
+			if(filereadline == "210"):
 				print("================210=================")
-			if(TEXT == "220"):
+			if(filereadline == "220"):
 				print("================220==================")
-			if(TEXT == "230"):
+			if(filereadline == "230"):
 				print("================230===================")
-			if( TEXT == "$ANGDIR"):
+			if( filereadline == "$ANGDIR"):
 				print("===============ANGDIR================")
 				
 			##################   ARC ##################################	
-			if (TEXT == "AcDbArc"):  #Found ARC	
-				ARKCOUNT = 1
+			if (filereadline == "AcDbArc"):  #Found ARC	
+				arccount = 1
 				while True:			
-					TEXT = file.readline() # Read identifier
-					TEXT = TEXT.strip()
-					print("|||||||||||||||ARC |||||||||||||||",TEXT,ARKCOUNT)
-					if (TEXT == "50"): 
-						TEXT = file.readline() # Read Start Angle
-						TEXT = TEXT.strip()
-						#print("||||||||||||||ARC Starting angle ||||||||||||||||",TEXT,ARKCOUNT)
-						StartAngle[ARKCOUNT]= float(TEXT)
-						TEXT = "NOTHING"
+					filereadline = file.readline() # Read identifier
+					filereadline = filereadline.strip()
+					print("|||||||||||||||ARC |||||||||||||||",filereadline,arccount)
+					if (filereadline == "50"): 
+						filereadline = file.readline() # Read Start Angle
+						filereadline = filereadline.strip()
+						#print("||||||||||||||ARC Starting angle ||||||||||||||||",filereadline,arccount)
+						startangle[arccount]= float(filereadline)
+						filereadline = "NOTHING"
 				
-					if (TEXT == "51"): 
-						TEXT = file.readline() # Read End Angle
-						TEXT = TEXT.strip()
-						#print("||||||||||||||ARC Ending angle ||||||||||||||||",TEXT,ARKCOUNT)
-						EndAngle[ARKCOUNT]= float(TEXT)
-						TEXT = "NOTHING"
+					if (filereadline == "51"): 
+						filereadline = file.readline() # Read End Angle
+						filereadline = filereadline.strip()
+						#print("||||||||||||||ARC Ending angle ||||||||||||||||",filereadline,arccount)
+						endangle[arccount]= float(filereadline)
+						filereadline = "NOTHING"
 						
-					if (TEXT == "0"): # No more data
-						if StartAngle[ARKCOUNT] > XMAX : XMAX = StartAngle[ARKCOUNT]
-						if StartAngle[ARKCOUNT] < XMIN : XMIN = StartAngle[ARKCOUNT]
-						if EndAngle[ARKCOUNT] > YMAX : YMAX = EndAngle[ARKCOUNT]
-						if EndAngle[ARKCOUNT] < YMIN : YMIN = EndAngle[ARKCOUNT]
-						ARC_CenterX[ARKCOUNT] = XCIRCLEPOS[CIRCLECOUNT] #copy the starting X position
-						ARC_CenterY[ARKCOUNT] = YCIRCLEPOS[CIRCLECOUNT] #Copy the Sarting Y position
-						ZARK[ARKCOUNT] = ZCIRCLEPOS[CIRCLECOUNT] #Copy the Starting Z postion
-						ARKRADIUS[ARKCOUNT] = CIRCLERADIUS[CIRCLECOUNT] #Copy the Radius 
-						ARKCOUNT = ARKCOUNT + 1												
-						TEXT = file.readline()
-						TEXT = TEXT.strip()
-						#print("----------ARC TEXT of 0-------------",TEXT)
-						if(TEXT == "CIRCLE"):						
-							TEXT = "NOTHING"
-						#print("-----------------------",TEXT);						
+					if (filereadline == "0"): # No more data
+						if startangle[arccount] > xmax : xmax = startangle[arccount]
+						if startangle[arccount] < xmin : xmin = startangle[arccount]
+						if endangle[arccount] > ymax : ymax = endangle[arccount]
+						if endangle[arccount] < ymin : ymin = endangle[arccount]
+						arcxcenter[arccount] = circlexpos[circlecount] #copy the starting X position
+						arcycenter[arccount] = circleypos[circlecount] #Copy the Sarting Y position
+						zarc[arccount] = circlezpos[circlecount] #Copy the Starting Z postion
+						arcradius[arccount] = circleradius[circlecount] #Copy the Radius 
+						arccount = arccount + 1												
+						filereadline = file.readline()
+						filereadline = filereadline.strip()
+						#print("----------ARC filereadline of 0-------------",filereadline)
+						if(filereadline == "CIRCLE"):						
+							filereadline = "NOTHING"
+						#print("-----------------------",filereadline);						
 						conditionbreakflag = 1						
 						break
 				if(conditionbreakflag): 
-					CIRCLECOUNT = 1
+					circlecount = 1
 					break				
 
-			if (TEXT == "0"): # No more data
-				if XCIRCLEPOS[CIRCLECOUNT] > XMAX : XMAX = XCIRCLEPOS[CIRCLECOUNT]
-				if XCIRCLEPOS[CIRCLECOUNT] < XMIN : XMIN = XCIRCLEPOS[CIRCLECOUNT]
-				if YCIRCLEPOS[CIRCLECOUNT] > YMAX : YMAX = YCIRCLEPOS[CIRCLECOUNT]
-				if YCIRCLEPOS[CIRCLECOUNT] < YMIN : YMIN = YCIRCLEPOS[CIRCLECOUNT]
-				CIRCLECOUNT = CIRCLECOUNT + 1
+			if (filereadline == "0"): # No more data
+				if circlexpos[circlecount] > xmax : xmax = circlexpos[circlecount]
+				if circlexpos[circlecount] < xmin : xmin = circlexpos[circlecount]
+				if circleypos[circlecount] > ymax : ymax = circleypos[circlecount]
+				if circleypos[circlecount] < ymin : ymin = circleypos[circlecount]
+				circlecount = circlecount + 1
 				break
 		###################### Create G-Code for Circle ###############################
-		for i in range(1,CIRCLECOUNT):
-			ARKCOUNT = ARKCOUNT -1
-			print ("Circle X centre", XCIRCLEPOS[i], " Y centre", YCIRCLEPOS[i] , " Radius" , CIRCLERADIUS[i])
+		for i in range(1,circlecount):
+			arccount = arccount -1
+			print ("Circle X centre", circlexpos[i], " Y centre", circleypos[i] , " Radius" , circleradius[i])
 
-			xpresentpos = round(XCIRCLEPOS[i]-CIRCLERADIUS[i])
-			ypresentpos = round(YCIRCLEPOS[i])
-			for theta in range(CircleStartA,CircleEndA):
+			xpresentpos = round(circlexpos[i]-circleradius[i])
+			ypresentpos = round(circleypos[i])
+			for theta in range(circlestartangle,circleendangle):
 				circlestartx[theta] = xpresentpos
 				circlestarty[theta] = ypresentpos
 				#Apply Parametric equation for the circle
-				circleendx[theta] = XCIRCLEPOS[i]+CIRCLERADIUS[i]*math.cos(theta*PIby180)
-				circleendy[theta] = YCIRCLEPOS[i]+CIRCLERADIUS[i]*math.sin(theta*PIby180)
+				circleendx[theta] = circlexpos[i]+circleradius[i]*math.cos(theta*PIby180)
+				circleendy[theta] = circleypos[i]+circleradius[i]*math.sin(theta*PIby180)
 				xpresentpos = circleendx[theta]
 				ypresentpos = circleendy[theta]
 				CCount = CCount + 1					
 			
 		##################### Split ARK to lines using Paramtric equation #########################
-		for i in range(1,ARKCOUNT):			
-			print ("ARC Start angle X centre", StartAngle[i], " End angle Y centre", EndAngle[i] , " Radius" , ARKRADIUS[i])
-			print ("ARC X centre", ARC_CenterX[i], " Y centre", ARC_CenterY[i] , " Radius" , ARKRADIUS[i])			
-			R = ARKRADIUS[i]
-			SA = int(StartAngle[i]) # SA = ARC Satarting Angle
-			EA = int(EndAngle[i])	# EA = ARC Ending Angle
-			xpresentpos = ARC_CenterX[i]
-			ypresentpos = ARC_CenterY[i]
+		for i in range(1,arccount):			
+			print ("ARC Start angle X centre", startangle[i], " End angle Y centre", endangle[i] , " Radius" , arcradius[i])
+			print ("ARC X centre", arcxcenter[i], " Y centre", arcycenter[i] , " Radius" , arcradius[i])			
+			R = arcradius[i]
+			SA = int(startangle[i]) # SA = ARC Satarting Angle
+			EA = int(endangle[i])	# EA = ARC Ending Angle
+			xpresentpos = arcxcenter[i]
+			ypresentpos = arcycenter[i]
 			if(SA < EA):
 				for j in range(SA,EA):
 					arcstartx[ACount] = xpresentpos
 					arcstarty[ACount] = ypresentpos					
 					#Apply Parametric equation for the circle
-					arcendx[ACount] = ARC_CenterX[i]+R*math.cos(j*PIby180)
-					arcendy[ACount] = ARC_CenterY[i]+R*math.sin(j*PIby180)
+					arcendx[ACount] = arcxcenter[i]+R*math.cos(j*PIby180)
+					arcendy[ACount] = arcycenter[i]+R*math.sin(j*PIby180)
 					xpresentpos = arcendx[ACount]
 					ypresentpos = arcendy[ACount]
 					ACount = ACount + 1
@@ -274,109 +274,206 @@ while True: #### Main DXF read loop ####
 					arcstartx[ACount] = xpresentpos
 					arcstarty[ACount] = ypresentpos
 					#Apply Parametric equation for the circle
-					arcendx[ACount] = ARC_CenterX[i]+R*math.sin(j*PIby180)
-					arcendy[ACount] = ARC_CenterY[i]+R*math.cos(j*PIby180)
+					arcendx[ACount] = arcxcenter[i]+R*math.sin(j*PIby180)
+					arcendy[ACount] = arcycenter[i]+R*math.cos(j*PIby180)
 					xpresentpos = arcendx[ACount]
 					ypresentpos = arcendy[ACount]
 					ACount = ACount + 1
 					
 	############## POLYLINE #####################		
-	if (TEXT == "AcDbPolyline"): # Found polyline
-		POLYLINECOUNT = 1
+	if (filereadline == "AcDbPolyline"): # Found polyline
+		polylinecount = 1
+		avoidrepeatedaction = 1
 		while True:
-			#print(TEXT)
-			TEXT = file.readline() # Read identifier
-			TEXT = TEXT.strip()
-			#print("++++++++++++++++++" ,TEXT)
+			#print(filereadline)
+			filereadline = file.readline() # Read identifier
+			filereadline = filereadline.strip()
+			#print("++++++++++++++++++" ,filereadline)
 
-			if (TEXT == "10"): 
-				TEXT = file.readline() # Read X start poosition (Vertex X coordinates)
-				TEXT = TEXT.strip()
-				print(TEXT)
-				XPOLYSTART[POLYLINECOUNT]= float(TEXT)
-				print("..................",XPOLYSTART[POLYLINECOUNT],".......POLYLINE X-AXIS.....................",POLYLINECOUNT)
-				TEXT="NOTHING"
+			if (filereadline == "10"): 
+				filereadline = file.readline() # Read X start poosition (Vertex X coordinates)
+				filereadline = filereadline.strip()
+				#print(filereadline)
+				xpolystart[polylinecount]= float(filereadline)
+				#print("..................",xpolystart[polylinecount],".......POLYLINE X-AXIS.....................",polylinecount)
+				filereadline="NOTHING"
 				checkinpolygcode = checkinpolygcode+1
 			
-			if (TEXT == "20"): 
-				TEXT = file.readline() # Read Y start poosition ( Y value of vertex coordinates)
-				TEXT = TEXT.strip()
-				print(TEXT)
-				YPOLYSTART[POLYLINECOUNT-1]= float(TEXT)
-				print("..................",YPOLYSTART[POLYLINECOUNT-1],".........POLYLINE Y-AXIS............",POLYLINECOUNT-1)
-				TEXT = "NOTHING"
+			if (filereadline == "20"): 
+				filereadline = file.readline() # Read Y start poosition ( Y value of vertex coordinates)
+				filereadline = filereadline.strip()
+				#print(filereadline)
+				ypolystart[polylinecount-1]= float(filereadline)
+				#print("..................",ypolystart[polylinecount-1],".........POLYLINE Y-AXIS............",polylinecount-1)
+				filereadline = "NOTHING"
 				checkinpolygcode = checkinpolygcode+1
 				
-			if (TEXT == "90"):
-				TEXT = file.readline() # Number of vertices
-				TEXT = TEXT.strip()
-				print("**********POLYLINE vertices**************" ,TEXT)
-				TEXT = file.readline()
-				TEXT = TEXT.strip()
-				if(TEXT == "70"):
-					TEXT = file.readline() #Polyline flag
-					TEXT = TEXT.strip()
-					print("********** POLYLINE 70**************" ,TEXT)
-					if(TEXT == "0" or TEXT == "1"):
-						TEXT = "1"
-						TEXT = file.readline()
-						TEXT = TEXT.strip()
-						print("************************" ,TEXT)
-						TEXT = file.readline()
-						TEXT = TEXT.strip()	
-						print("************************" ,TEXT)
+			if (filereadline == "90"):
+				filereadline = file.readline() # Number of vertices
+				filereadline = filereadline.strip()
+				#print("**********POLYLINE vertices**************" ,filereadline)
+				filereadline = file.readline()
+				filereadline = filereadline.strip()
+				if(filereadline == "70"):
+					filereadline = file.readline() #Polyline flag
+					filereadline = filereadline.strip()
+					#print("********** POLYLINE 70**************" ,filereadline)
+					if(filereadline == "0" or filereadline == "1"):
+						filereadline = "1"
+						filereadline = file.readline()
+						filereadline = filereadline.strip()
+						#print("************************" ,filereadline)
+						filereadline = file.readline()
+						filereadline = filereadline.strip()	
+						#print("************************" ,filereadline)
 						
-			if (TEXT == "0"): # No more data
+			if (filereadline == "0"): # No more data
 				break
 				
-			if (YPOLYSTART[POLYLINECOUNT] > YMAX): YMAX = YPOLYSTART[POLYLINECOUNT]
-			if (YPOLYSTART[POLYLINECOUNT] < YMIN): YMIN = YPOLYSTART[POLYLINECOUNT]
-			if (XPOLYSTART[POLYLINECOUNT] > XMAX): XMAX = XPOLYSTART[POLYLINECOUNT]
-			if (XPOLYSTART[POLYLINECOUNT] < XMIN): XMIN = XPOLYSTART[POLYLINECOUNT]	
-			POLYLINECOUNT = POLYLINECOUNT + 1
+			if (ypolystart[polylinecount] > ymax): ymax = ypolystart[polylinecount]
+			if (ypolystart[polylinecount] < ymin): ymin = ypolystart[polylinecount]
+			if (xpolystart[polylinecount] > xmax): xmax = xpolystart[polylinecount]
+			if (xpolystart[polylinecount] < xmin): xmin = xpolystart[polylinecount]	
+			polylinecount = polylinecount + 1
 			
 			######### Creating GCODE for PolyLines #################################
 			
 			while(checkinpolygcode == 2):
 				checkinpolygcode = 0				
-				print("________________________________________________>",TEXT)
-
-				for i in range(1,POLYLINECOUNT):
-					#print ("Line X start" , XPOLYSTART[i] , " Y start" , YPOLYSTART[i])
-					
-					#xpresentpos = round(XPOLYSTART[i])
-					#ypresentpos = round(YPOLYSTART[i])
-					if((avoidrepeatedaction < i) and (XPOLYSTART[i] > 0) and (YPOLYSTART[i]) > 0):											
-						polystartx[i] = xpresentpos
-						polystarty[i] = ypresentpos
-						ployendx[i] = round(XPOLYSTART[i])
-						polyendy[i] = round(YPOLYSTART[i])
-						
-						xpresentpos = ployendx[i]
-						ypresentpos = polyendy[i]							
-				avoidrepeatedaction=i	
-	if( TEXT == "EOF"):
-		ARKCOUNT = ARKCOUNT + 1
+				#print("________________________________________________>",filereadline)				
+				for i in range(avoidrepeatedaction,polylinecount):
+					#print (" poly Line X start" , xpolystart[i] , " Y start" , ypolystart[i])					
+					#xpresentpos = round(xpolystart[i])
+					#ypresentpos = round(ypolystart[i])
+					#if((avoidrepeatedaction <= i) and (xpolystart[i] > 0) and (ypolystart[i]) > 0):
+					if((xpolystart[i] > 0) and (ypolystart[i]) > 0):
+						polystartx[PLCount] = xpolypresentpos
+						polystarty[PLCount] = ypolypresentpos
+						polyendx[PLCount] = xpolystart[i]
+						polyendy[PLCount] = ypolystart[i]						
+						xpolypresentpos = xpolystart[i]#polyendx[PLCount]
+						ypolypresentpos = ypolystart[i]#polyendy[PLCount]
+						#print("polystartx,polystarty: ",polystartx[PLCount],polystarty[PLCount],"          polyendx,polyendy: ",polyendx[PLCount],polyendy[PLCount])
+						PLCount = PLCount + 1
+				avoidrepeatedaction=i
+				
+	if( filereadline == "EOF"): #EOF= End Of File
+		arccount = arccount + 1
 		break
 file.close()
 print("file reading is completed")
-print("Line count: " , LINECOUNT-1)
-print("Arc count: ",ARKCOUNT-1 ,ACount)
-print("Circle count: ",CIRCLECOUNT-1,CCount)
-print("Polyline count: ",POLYLINECOUNT-1)
-#for i in range (1,ACount):
-#	print("XSATRT :", arcstartx[i],",YSTART: ",arcstarty[i],"                    XEND:",arcendx[i],",YEND:",arcendy[i])
+print("Line count: " , linecount-1)
+print("Arc count: ",arccount-1 ,ACount)
+print("Circle count: ",circlecount,CCount)
+print("Polyline count: ",polylinecount-1, PLCount)
+#for i in range (1,PLCount):
+#	print("polystartx,polystarty: ",polystartx[i],polystarty[i],"          polyendx,polyendy: ",polyendx[i],polyendy[i])
 
-########################## Gcode using segmentation ###########################
+###################### segmented gcode from dxf file function for line,polyline, circle and arc ###########################
+def seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar): #"linepolycirclearcvar=1" for line and polyline  or "linepolycirclearcvar=0" for circle and arc
+	global gcode
+	####################### Vertical Segment #####################
+	if lx1 == lx2: #Line is vertical
+		#print("Line is vertical")
+		if lx1 >= sx1 and lx1 <= sx2: 
+			#print("Line is in Segment range")
+			if ly1 > ly2: #if line is start with top side and ends with bottom side, to swap the line values
+				temp = ly1
+				ly1 = ly2
+				ly2 = temp
+
+			#if ly1 >= sy1 and ly2 >= sy2 and ly1-sy1 == 0 or ly1-sy1 <= seglen and sy2-ly2 <= seglen:
+			if ((ly1 >= sy1 and ly1 <= sy2) and (ly2 >= sy1 and ly2 <= sy2)): #verticla line is within the segment or just covering the entire segment
+				#print("vertical axis condition 1")
+				xstart = lx1-sx1
+				ystart = ly1 - sy1
+				xend = lx2-sx1
+				yend = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
+				xstart = lx1 - sx1
+				ystart = 0
+				xend = lx2 - sx1
+				yend = sy2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertical line is start in segment or on segment line and end with out of segment in top side
+				xstart = lx1 - sx1
+				ystart = ly1 - sy1 
+				xend  = lx2 - sx1
+				yend = sy2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2: #Vertical line is start in segment or segment line and ens with out of segment in bottom side
+				xstart =  lx1 - sx1
+				ystart = 0
+				xend = lx2 - sx1
+				yend  = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+
+		else:
+			print("Line or Polyline or Circle or Arc may be next segment object")
+	########################### Horizantal segment ######################		
+	if ly1 == ly2: #Line is Horizantal
+		#print("Line is horizontal")	
+		if ly1 >= sy1 and ly1 <= sy2 :
+			#print("Line is in Segment range")
+			if lx1 > lx2: # if line start with left side and ends with right side, to swape the line values
+				temp = lx1
+				lx1 = lx2
+				lx2 = temp
+
+			if lx1 >= sx1 and lx1 <=sx2 and lx2 >= sx1 and lx2 <= sx2: #Horizontal line is within the segment or just covering the entire segment
+				xstart = lx1 - sx1
+				ystart = ly1 - sy1
+				xend = lx2 - sx1
+				yend = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle				
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
+				xstart = 0
+				ystart = ly1 - sy1
+				xend = sx2 - sx1
+				yend = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: # Horizontal line is start in segment or segment line and end with out of segment in right side
+				xstart = lx1 - sx1
+				ystart = ly1 - sy1 
+				xend  = sx2 - sx1
+				yend = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+			elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:#Horizantal line is start in segment or segment line and end with out of segment in lift side
+				xstart =  0
+				ystart = ly1 - sy1
+				xend = lx2 - sx1
+				yend  = ly2 - sy1
+				if linepolycirclearcvar == 1 or xstart != xend or ystart != yend:	#remove repeatance value for arc and circle
+					gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+					gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+		else:
+			print("Line or Polyline or Circle or Arc may be next segment object")
+
+
+########################## gcode using segmentation ###########################
 for xsegnum in range(xsegstart,xsegmax):
 	for ysegnum in range(ysegstart,ysegmax):
-		#print("--------------",ysegnum,"  ",xsegnum)
-		
-		############## file name format #####################
+		#print("--------------",ysegnum,"  ",xsegnum)		
+		####################### file name format #####################
 		xsnum = str(xsegnum)
 		ysnum = str(ysegnum)
-		xlen = filexylen - len(xsnum)
-		ylen = filexylen - len(ysnum)
+		xlen = xylenforfile - len(xsnum)
+		ylen = xylenforfile - len(ysnum)
 		#print(xlen,ylen)
 		for i in range(0,xlen):
 			xsnum = '0'+ str(xsnum)
@@ -386,7 +483,7 @@ for xsegnum in range(xsegstart,xsegmax):
 		file = str(xsnum) + str(ysnum) 
 		#file = file_format + str(xsegnum) + file_format +str(ysegnum)
 		seg_gcode_file = open((str(file) + '.gcode'),'w')   #file created like xxxyyy.gcode
-		print("Segmentaion Gcode file: ",seg_gcode_file)
+		print("Segmentaion gcode file: ",seg_gcode_file)
 		xlen = 0
 		ylen = 0
 		
@@ -399,416 +496,62 @@ for xsegnum in range(xsegstart,xsegmax):
 		#print("segment number: " , "(",xsegnum , ",", ysegnum,")")
 		
 		########################GCODE for LINE ##################################
-		for line in range(1,LINECOUNT):
+		for line in range(1,linecount):
 			############# X and Y start and end values ############
-			lx1 = round(XSTART[line])#3
-			ly1 = round(YSTART[line])#50
-			lx2 = round(XEND[line])#70
-			ly2 = round(YEND[line])#50
-			#print("XSATRT :", XSTART[line],",YSTART: ",YSTART[line],"                    XEND:",XEND[line],",YEND:",YEND[line])
-			
-			####################### Vertical Segment ############################
-			if lx1 == lx2: #Line is vertical
-				#print("Line is vertical")
-				if lx1 >= sx1 and lx1 <= sx2: 
-					#print("Line is in Segment range")
-					if ly1 > ly2:
-						temp = ly1
-						ly1 = ly2
-						ly2 = temp
-
-					#if ly1 >= sy1 and ly2 >= sy2 and ly1-sy1 == 0 or ly1-sy1 <= seglen and sy2-ly2 <= seglen:
-					if ((ly1 >= sy1 and ly1 <= sy2) and (ly2 >= sy1 and ly2 <= sy2)): #verticla line is within the segment or just covering the entire segment
-						#print("vertical axis condition 1")
-						xstart = lx1-sx1
-						ystart = ly1 - sy1
-						xend = lx2-sx1
-						yend = ly2 - sy1
+			lx1 = round(xstart[line])#3
+			ly1 = round(ystart[line])#50
+			lx2 = round(xend[line])#70
+			ly2 = round(yend[line])#50
+			linepolycirclearcvar = 1
+			#print("XSATRT :", xstart[line],",ystart: ",ystart[line],"                    xend:",xend[line],",yend:",yend[line])
+			seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar);
 					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
-						xstart = lx1 - sx1
-						ystart = 0
-						xend = lx2 - sx1
-						yend = sy2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertical line is start in segment or on segment line and end with out of segment in top side
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1 
-						xend  = lx2 - sx1
-						yend = sy2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2: #Vertical line is start in segment or segment line and ens with out of segment in bottom side
-						xstart =  lx1 - sx1
-						ystart = 0
-						xend = lx2 - sx1
-						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-
-				else:
-					print("Line may be next segment object")
-			
-			########################### Horizantal segment ######################		
-			if ly1 == ly2: #Line is Horizantal
-				#print("Line is horizontal")	
-				if ly1 >= sy1 and ly1 <= sy2 :
-					#print("Line is in Segment range")
-					if lx1 > lx2:
-						temp = lx1
-						lx1 = lx2
-						lx2 = temp
-					#if ((lx2 - sx1 <= seglen) and (sx2 - lx1 <= seglen)) or ((sx1 <= lx2 and lx2 >= sx2) or (sx2-lx2 <= seglen)): #line is with in segment dimensions
-
-					if lx1 >= sx1 and lx1 <=sx2 and lx2 >= sx1 and lx2 <= sx2: #Horizontal line is within the segment or just covering the entire segment
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1
-						xend = lx2 - sx1
-						yend = ly2 - sy1
+		########################## GCODE for ARC ###################################
+		#for ac in range(1,arccount):
+		for line in range(1,ACount):
+			############# X and Y start and end values ############
+			lx1 = round(arcstartx[line])#3
+			ly1 = round(arcstarty[line])#50
+			lx2 = round(arcendx[line])#70
+			ly2 = round(arcendy[line])#50
+			linepolycirclearcvar = 0
+			#print("arcstartx:",arcstartx[line],",",lx1,"                  arcstarty:",arcstarty[line],",",ly1)
+			#print("arcendx:",arcendx[line],",",lx2,"                   arcendy:",arcendy[line],",",ly2)			
+			seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar);
 					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
-						xstart = 0
-						ystart = ly1 - sy1
-						xend = sx2 - sx1
-						yend = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: # Horizontal line is start in segment or segment line and end with out of segment in right side
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1 
-						xend  = sx2 - sx1
-						yend = ly2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:#Horizantal line is start in segment or segment line and end with out of segment in lift side
-						xstart =  0
-						ystart = ly1 - sy1
-						xend = lx2 - sx1
-						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-				else:
-					print("Line may be next segment object")
+		######################## GCODE for CIRCLE ################################
+		#for cc in range(1,circlecount):
+		for line in range(1,CCount):
+			############# X and Y start and end values ############
+			lx1 = round(circlestartx[line])#3
+			ly1 = round(circlestarty[line])#50
+			lx2 = round(circleendx[line])#70
+			ly2 = round(circleendy[line])#50
+			linepolycirclearcvar = 0
+			#print("arcstartx:",arcstartx[line],",",lx1,"                  arcstarty:",arcstarty[line],",",ly1)
+			#print("arcendx:",arcendx[line],",",lx2,"                   arcendy:",arcendy[line],",",ly2)		
+			seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar);
 					
-		#################### GCODE for ARC #####################################
-		for ac in range(1,ARKCOUNT):
-			for line in range(1,ACount):
-				############# X and Y start and end values ############
-				lx1 = round(arcstartx[line])#3
-				ly1 = round(arcstarty[line])#50
-				lx2 = round(arcendx[line])#70
-				ly2 = round(arcendy[line])#50
-				#print("arcstartx:",arcstartx[line],",",lx1,"                  arcstarty:",arcstarty[line],",",ly1)
-				#print("arcendx:",arcendx[line],",",lx2,"                   arcendy:",arcendy[line],",",ly2)
-				
-				################# Vertical Segment #############################
-				if lx1 == lx2: #arc Line is vertical
-					#print("Line is vertical")
-					if lx1 >= sx1 and lx1 <= sx2: 
-						#print("Line is in Segment range")
-						if ly1 > ly2:
-							temp = ly1
-							ly1 = ly2
-							ly2 = temp
-
-						#if ly1 >= sy1 and ly2 >= sy2 and ly1-sy1 == 0 or ly1-sy1 <= seglen and sy2-ly2 <= seglen:
-						if ((ly1 >= sy1 and ly1 <= sy2) and (ly2 >= sy1 and ly2 <= sy2)): #verticla line is within the segment or just covering the entire segment
-							#print("vertical axis condition 1")
-							xstart = lx1-sx1
-							ystart = ly1 - sy1
-							xend = lx2-sx1
-							yend = ly2 - sy1
-						
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
-							#print("vertical axis condition 2")
-							xstart = lx1 - sx1
-							ystart = 0
-							xend = lx2 - sx1
-							yend = sy2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertical line is start in segment or on segment line and end with out of segment in top side
-							#print("vertical axis condition 3")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1 
-							xend  = lx2 - sx1
-							yend = sy2 - sy1 
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2: #Vertical line is start in segment or segment line and ens with out of segment in bottom side
-							#print("vertical axis condition 4")
-							xstart =  lx1 - sx1
-							ystart = 0
-							xend = lx2 - sx1
-							yend  = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-
-					else:
-						print("Line may be next segment object")
-				
-				######################### Horizantal Segment ##############################	
-				if ly1 == ly2: #arc Line is Horizantal
-					#print("Line is horizontal")	
-					if ly1 >= sy1 and ly1 <= sy2 :
-						#print("Line is in Segment range")
-						if lx1 > lx2:
-							temp = lx1
-							lx1 = lx2
-							lx2 = temp
-						#if ((lx2 - sx1 <= seglen) and (sx2 - lx1 <= seglen)) or ((sx1 <= lx2 and lx2 >= sx2) or (sx2-lx2 <= seglen)): #line is with in segment dimensions
-
-						if lx1 >= sx1 and lx1 <=sx2 and lx2 >= sx1 and lx2 <= sx2: #Horizontal line is within the segment or just covering the entire segment
-							#print("HC 1")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1
-							xend = lx2 - sx1
-							yend = ly2 - sy1
-						
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
-							#print("HC 2")
-							xstart = 0
-							ystart = ly1 - sy1
-							xend = sx2 - sx1
-							yend = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: # Horizontal line is start in segment or segment line and end with out of segment in right side
-							#print("HC 3")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1 
-							xend  = sx2 - sx1
-							yend = ly2 - sy1 
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:#Horizantal line is start in segment or segment line and end with out of segment in lift side
-							#print("HC 4")
-							xstart =  0
-							ystart = ly1 - sy1
-							xend = lx2 - sx1
-							yend  = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					else:
-						print("Line may be next segment object")
-						
-		################### GCODE for CIRCLE ################################
-		for cc in range(1,CIRCLECOUNT):
-			for line in range(1,CCount):
-				############# X and Y start and end values ############
-				lx1 = round(circlestartx[line])#3
-				ly1 = round(circlestarty[line])#50
-				lx2 = round(circleendx[line])#70
-				ly2 = round(circleendy[line])#50
-				#print("arcstartx:",arcstartx[line],",",lx1,"                  arcstarty:",arcstarty[line],",",ly1)
-				#print("arcendx:",arcendx[line],",",lx2,"                   arcendy:",arcendy[line],",",ly2)
-				
-				#################### Vertical Segment ##########################
-				if lx1 == lx2: #circle Line is vertical
-					#print("Line is vertical")
-					if lx1 >= sx1 and lx1 <= sx2: 
-						#print("Line is in Segment range")
-						if ly1 > ly2:
-							temp = ly1
-							ly1 = ly2
-							ly2 = temp
-
-						#if ly1 >= sy1 and ly2 >= sy2 and ly1-sy1 == 0 or ly1-sy1 <= seglen and sy2-ly2 <= seglen:
-						if ((ly1 >= sy1 and ly1 <= sy2) and (ly2 >= sy1 and ly2 <= sy2)): #verticla line is within the segment or just covering the entire segment
-							#print("vertical axis condition 1")
-							xstart = lx1-sx1
-							ystart = ly1 - sy1
-							xend = lx2-sx1
-							yend = ly2 - sy1
-						
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
-							#print("vertical axis condition 2")
-							xstart = lx1 - sx1
-							ystart = 0
-							xend = lx2 - sx1
-							yend = sy2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertical line is start in segment or on segment line and end with out of segment in top side
-							#print("vertical axis condition 3")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1 
-							xend  = lx2 - sx1
-							yend = sy2 - sy1 
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2: #Vertical line is start in segment or segment line and ens with out of segment in bottom side
-							#print("vertical axis condition 4")
-							xstart =  lx1 - sx1
-							ystart = 0
-							xend = lx2 - sx1
-							yend  = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-
-					else:
-						print("Line may be next segment object")
-				
-				###################### Horizantal Segment #############################
-				if ly1 == ly2: #circle Line is Horizantal
-					#print("Line is horizontal")	
-					if ly1 >= sy1 and ly1 <= sy2 :
-						#print("Line is in Segment range")
-						if lx1 > lx2:
-							temp = lx1
-							lx1 = lx2
-							lx2 = temp
-						#if ((lx2 - sx1 <= seglen) and (sx2 - lx1 <= seglen)) or ((sx1 <= lx2 and lx2 >= sx2) or (sx2-lx2 <= seglen)): #line is with in segment dimensions
-
-						if lx1 >= sx1 and lx1 <=sx2 and lx2 >= sx1 and lx2 <= sx2: #Horizontal line is within the segment or just covering the entire segment
-							#print("HC 1")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1
-							xend = lx2 - sx1
-							yend = ly2 - sy1
-						
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
-							#print("HC 2")
-							xstart = 0
-							ystart = ly1 - sy1
-							xend = sx2 - sx1
-							yend = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: # Horizontal line is start in segment or segment line and end with out of segment in right side
-							#print("HC 3")
-							xstart = lx1 - sx1
-							ystart = ly1 - sy1 
-							xend  = sx2 - sx1
-							yend = ly2 - sy1 
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-						elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:#Horizantal line is start in segment or segment line and end with out of segment in lift side
-							#print("HC 4")
-							xstart =  0
-							ystart = ly1 - sy1
-							xend = lx2 - sx1
-							yend  = ly2 - sy1
-							Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-							Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					else:
-						print("Line may be next segment object")
-						
 		########################GCODE for POLYLINE ##################################
-		for pline in range(1,POLYLINECOUNT):
+		for pline in range(1,PLCount):
 			############# X and Y start and end values ############
 			lx1 = round(polystartx[pline])#3
 			ly1 = round(polystarty[pline])#50
-			lx2 = round(ployendx[pline])#70
+			lx2 = round(polyendx[pline])#70
 			ly2 = round(polyendy[pline])#50
-			#print("XSATRT :", XSTART[line],",YSTART: ",YSTART[line],"                    XEND:",XEND[line],",YEND:",YEND[line])
-			
-			####################### Vertical Segment ############################
-			if lx1 == lx2: #PolyLine is vertical
-				#print("Line is vertical")
-				if lx1 >= sx1 and lx1 <= sx2: 
-					#print("Line is in Segment range")
-					if ly1 > ly2:
-						temp = ly1
-						ly1 = ly2
-						ly2 = temp
-
-					#if ly1 >= sy1 and ly2 >= sy2 and ly1-sy1 == 0 or ly1-sy1 <= seglen and sy2-ly2 <= seglen:
-					if ((ly1 >= sy1 and ly1 <= sy2) and (ly2 >= sy1 and ly2 <= sy2)): #verticla line is within the segment or just covering the entire segment
-						#print("vertical axis condition 1")
-						xstart = lx1-sx1
-						ystart = ly1 - sy1
-						xend = lx2-sx1
-						yend = ly2 - sy1
-					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
-						xstart = lx1 - sx1
-						ystart = 0
-						xend = lx2 - sx1
-						yend = sy2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertical line is start in segment or on segment line and end with out of segment in top side
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1 
-						xend  = lx2 - sx1
-						yend = sy2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2: #Vertical line is start in segment or segment line and ens with out of segment in bottom side
-						xstart =  lx1 - sx1
-						ystart = 0
-						xend = lx2 - sx1
-						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-
-				else:
-					print("Line may be next segment object")
-			########################### Horizantal segment ######################		
-			if ly1 == ly2: #PolyLine is Horizantal
-				#print("Line is horizontal")	
-				if ly1 >= sy1 and ly1 <= sy2 :
-					#print("Line is in Segment range")
-					if lx1 > lx2:
-						temp = lx1
-						lx1 = lx2
-						lx2 = temp
-
-					if lx1 >= sx1 and lx1 <=sx2 and lx2 >= sx1 and lx2 <= sx2: #Horizontal line is within the segment or just covering the entire segment
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1
-						xend = lx2 - sx1
-						yend = ly2 - sy1
-					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
-						xstart = 0
-						ystart = ly1 - sy1
-						xend = sx2 - sx1
-						yend = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: # Horizontal line is start in segment or segment line and end with out of segment in right side
-						xstart = lx1 - sx1
-						ystart = ly1 - sy1 
-						xend  = sx2 - sx1
-						yend = ly2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:#Horizantal line is start in segment or segment line and end with out of segment in lift side
-						xstart =  0
-						ystart = ly1 - sy1
-						xend = lx2 - sx1
-						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
-				else:
-					print("Line may be next segment object")
-								
-		print(Gcode)
-		seg_gcode_file.write(Gcode)
+			linepolycirclearcvar = 1
+			#print("polystartx:",polystartx[pline],",",lx1,"                  polystarty:",polystarty[pline],",",ly1)
+			#print("polyendx:",polyendx[pline],",",lx2,"                   	 polyendy:",polyendy[pline],",",ly2)			
+			seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar);								
+		
+		print(gcode)
+		############################# Write gcode to file ###########################
+		seg_gcode_file.write(gcode)
 		seg_gcode_file.close()
-		Gcode = ""
-		gcodefilecount = gcodefilecount +1
+		gcode = ""
+		gcodefilescount = gcodefilescount +1
 		#time.sleep(1)
-print(gcodefilecount , "Gcode file are successfully created.")
+print(gcodefilescount , "gcode file are successfully created.")
 
 '''
 import os
@@ -836,8 +579,8 @@ ystart =0
 yend = 0
 
 ########## gcode variable ##################
-Gcode = ""
-gcodefilecount = 0
+gcode = ""
+gcodefilescount = 0
 ############# X and Y start and end values ############
 
 
@@ -852,7 +595,7 @@ for xsegnum in range(xsegstart,xsegmax):
 
 		file = file_format + str(xsegnum) + file_format +str(ysegnum)
 		seg_gcode_file = open((str(file) + '.gcode'),'w')
-		print("Segmentaion Gcode file: ",seg_gcode_file)
+		print("Segmentaion gcode file: ",seg_gcode_file)
 		for line in range(1,3):
 			if line ==1:
 				lx1 = 30
@@ -881,29 +624,29 @@ for xsegnum in range(xsegstart,xsegmax):
 						xend = lx2-sx1
 						yend = ly2 - sy1
 					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2: #Vertica line is spaning below and above the segment
 						xstart = lx1 - sx1
 						ystart = 0
 						xend = lx2 - sx1
 						yend = sy2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif ly1 >= sy1 and ly1 < sy2 and ly2 > sy1 and ly2 > sy2:
 						xstart = lx1 - sx1
 						ystart = ly1 - sy1 
 						xend  = lx2 - sx1
 						yend = sy2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif ly1 < sy1 and ly1 < sy2 and ly2 > sy1 and ly2 <= sy2:
 						xstart =  lx1 - sx1
 						ystart = 0
 						xend = lx2 - sx1
 						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 
 					
 				else:
@@ -928,38 +671,38 @@ for xsegnum in range(xsegstart,xsegmax):
 						xend = lx2 - sx1
 						yend = ly2 - sy1
 					
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2: #horizantal line is spaning life and right of the segment
 						xstart = 0
 						ystart = ly1 - sy1
 						xend = sx2 - sx1
 						yend = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif lx1 >= sx1 and lx1 < sx2 and lx2 > sx1 and lx2 > sx2:
 						xstart = lx1 - sx1
 						ystart = ly1 - sy1 
 						xend  = sx2 - sx1
 						yend = ly2 - sy1 
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 					elif lx1 < sx1 and lx1 < sx2 and lx2 > sx1 and lx2 <= sx2:
 						xstart =  0
 						ystart = ly1 - sy1
 						xend = lx2 - sx1
 						yend  = ly2 - sy1
-						Gcode = Gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
-						Gcode = Gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
+						gcode = gcode + "G00 X" + str(round(xstart)) + " Y" + str(round(ystart)) + "\n"
+						gcode = gcode + "G01 X" + str(round(xend)) + " Y" + str(round(yend)) + "\n"
 				else:
 					print("Line may be next segment object")
 			
-		print(Gcode)
-		seg_gcode_file.write(Gcode)
+		print(gcode)
+		seg_gcode_file.write(gcode)
 		seg_gcode_file.close()
-		Gcode = ""
-		gcodefilecount = gcodefilecount +1
-print(gcodefilecount , "Gcode file are successfully created.")
+		gcode = ""
+		gcodefilescount = gcodefilescount +1
+print(gcodefilescount , "gcode file are successfully created.")
 
 '''
 
@@ -968,3 +711,16 @@ print(gcodefilecount , "Gcode file are successfully created.")
 
 
 
+
+
+'''import os
+
+def function(X1,Y1,X2,Y2):
+	#lX1=0
+	print("output: ",X1,Y1,X2,Y2)
+
+lx1=1
+ly1=2
+lx2=3
+ly2 =3
+function(lx1,ly1,lx2,ly2);'''
