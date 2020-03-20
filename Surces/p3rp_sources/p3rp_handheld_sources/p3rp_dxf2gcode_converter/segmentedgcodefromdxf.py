@@ -3,31 +3,33 @@ import sys
 import math
 openfile = sys.argv[1]
 
-########## Segmentation Dimensions ###############
+#Segmentation Dimensions and variable
 seglen = 18
 segwidth = 12
-layoutxmax = 108 #sys.argv[2]
-layoutymax = 72 #sys.argv[3]
+#layoutxmax = 108 #sys.argv[2]
+#layoutymax = 72 #sys.argv[3]
 #xsegnum = 0
 #ysegnum = 0
 #file_format = '00'
 xsegstart = 0
 ysegstart = 0
-xsegmax = layoutxmax //seglen
-ysegmax = layoutymax // segwidth
+#xsegmax = layoutxmax //seglen
+#ysegmax = layoutymax // segwidth
 #print(xsegmax,ysegmax)
 PIby180 = 3.1459/180
 quantity  = 10000000
-circlestartangle = 0
-circleendangle = 361
 xmax = 0
 xmin = 0
 ymax = 0
 ymin = 0
 xylenforfile = 3
-checkinpolygcode = 0
-avoidrepeatedaction = 0
-########## gcode variable ##################
+
+#Layout maximum values buffers
+layoutxmax = [0 for i in range(1)]
+layoutymax = [0 for i in range(1)]
+layoutzmax = [0 for i in range(1)]
+
+#Gcode variable 
 gcode = ""
 gcodefilescount = 0
 
@@ -49,12 +51,15 @@ circlestartx = [0 for i in range(quantity)]
 circlestarty = [0 for i in range(quantity)]
 circleendx = [0 for i in range(quantity)]
 circleendy = [0 for i in range(quantity)]
+circlestartangle = 0
+circleendangle = 361
+
 #ARC Buffer and varibles
 startangle   = [0 for i in range(quantity)]
 endangle   = [0 for i in range(quantity)] 
 arcxcenter   = [0 for i in range(quantity)]
 arcycenter   = [0 for i in range(quantity)]
-zarc   = [0 for i in range(quantity)]
+arczcenter   = [0 for i in range(quantity)]
 arcradius = [0 for i in range(quantity)]
 arccount    = 1
 ACount = 1
@@ -62,6 +67,7 @@ arcstartx = [0 for i in range(quantity)]
 arcstarty = [0 for i in range(quantity)]
 arcendx = [0 for i in range(quantity)]
 arcendy = [0 for i in range(quantity)]
+
 #POLYLINE Buffer and Varibles
 xpolystart = [0 for i in range(quantity)]
 ypolystart = [0 for i in range(quantity)]
@@ -73,17 +79,42 @@ polyendx = [0 for i in range(quantity)]
 polyendy = [0 for i in range(quantity)]
 xpolypresentpos = 0
 ypolypresentpos = 0
+checkinpolygcode = 0
+avoidrepeatedaction = 0
 
 DXFPATH, DXFNAME = os.path.split(openfile)
 
-#### Read DXF file ############################################
-
+#### Open and Read DXF file ############################################
 file = open(openfile,errors='ignore')
-while True: #### Main DXF read loop ####
-	
+while True: #### Main DXF read loop ####	
 	filereadline = file.readline()
 	filereadline = filereadline.strip() # Remove spaces 
 	#print(filereadline)
+	
+	####################### Read x,y and z maximum value #########################
+	if(filereadline == "$EXTMAX"):
+		while True:
+			filereadline = file.readline()
+			filereadline = filereadline.strip() 
+			print("$EXTMAX",filereadline)
+			if(filereadline == "10"): 
+				filereadline = file.readline()
+				filereadline = filereadline.strip()
+				layoutxmax = float(filereadline) #X maximum value
+				filereadline = "NOTHING"
+			if(filereadline == "20"):
+				filereadline = file.readline()
+				filereadline = filereadline.strip()
+				layoutymax = float(filereadline) #Y maximum value
+				filereadline = "NOTHING"
+			if(filereadline == "30"): 
+				filereadline = file.readline()
+				filereadline = filereadline.strip()
+				layoutzmax = float(filereadline) #Z maximum value
+				filereadline = "NOTHING"
+			if(filereadline == "9"):
+				break
+				
 	'''if(filereadline == '$INSUNITS'):
 		while True:			
 			filereadline = file.readline()
@@ -211,7 +242,7 @@ while True: #### Main DXF read loop ####
 						if endangle[arccount] < ymin : ymin = endangle[arccount]
 						arcxcenter[arccount] = circlexpos[circlecount] #copy the starting X position
 						arcycenter[arccount] = circleypos[circlecount] #Copy the Sarting Y position
-						zarc[arccount] = circlezpos[circlecount] #Copy the Starting Z postion
+						arczcenter[arccount] = circlezpos[circlecount] #Copy the Starting Z postion
 						arcradius[arccount] = circleradius[circlecount] #Copy the Radius 
 						arccount = arccount + 1												
 						filereadline = file.readline()
@@ -366,6 +397,7 @@ print("Line count: " , linecount-1)
 print("Arc count: ",arccount-1 ,ACount)
 print("Circle count: ",circlecount,CCount)
 print("Polyline count: ",polylinecount-1, PLCount)
+print("layout maximum values of x and y: ",layoutxmax,layoutymax)
 #for i in range (1,PLCount):
 #	print("polystartx,polystarty: ",polystartx[i],polystarty[i],"          polyendx,polyendy: ",polyendx[i],polyendy[i])
 
@@ -466,6 +498,11 @@ def seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar): #"linepolycirclearcva
 
 
 ########################## gcode using segmentation ###########################
+#layoutxmax = round(layoutxmax)
+#layoutymax = round(layoutymax)
+xsegmax = int(round(layoutxmax)) // seglen
+ysegmax = int(round(layoutymax)) // segwidth
+
 for xsegnum in range(xsegstart,xsegmax):
 	for ysegnum in range(ysegstart,ysegmax):
 		#print("--------------",ysegnum,"  ",xsegnum)		
