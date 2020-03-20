@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import time
 openfile = sys.argv[1]
 
 #Segmentation Dimensions and variable
@@ -13,6 +14,7 @@ segwidth = 12
 #file_format = '00'
 xsegstart = 0
 ysegstart = 0
+jobid = '01'
 #xsegmax = layoutxmax //seglen
 #ysegmax = layoutymax // segwidth
 #print(xsegmax,ysegmax)
@@ -502,7 +504,14 @@ def seggcodefromdxf(lx1,ly1,lx2,ly2,linepolycirclearcvar): #"linepolycirclearcva
 #layoutymax = round(layoutymax)
 xsegmax = int(round(layoutxmax)) // seglen
 ysegmax = int(round(layoutymax)) // segwidth
-
+#remove all previous gcdfiles from current working directory
+cwdpath = os.getcwd() #Current working directory
+for gcdfile in os.listdir(cwdpath):
+	if gcdfile.endswith('.gcd'): #select .gcd file
+		os.remove(gcdfile) #remove gcdfile
+print("Removed all gcdfiles in current working directory.Start segmentation.")
+time.sleep(2) #two second delay	
+#segmentation matrix for dxf file			
 for xsegnum in range(xsegstart,xsegmax):
 	for ysegnum in range(ysegstart,ysegmax):
 		#print("--------------",ysegnum,"  ",xsegnum)		
@@ -517,9 +526,9 @@ for xsegnum in range(xsegstart,xsegmax):
 		for j in range(0,ylen):
 			ysnum = '0' + str(ysnum)
 		#print(xsnum,ysnum)		
-		file = str(xsnum) + str(ysnum) 
+		file = str(jobid) + str(xsnum) + str(ysnum) 
 		#file = file_format + str(xsegnum) + file_format +str(ysegnum)
-		seg_gcode_file = open((str(file) + '.gcode'),'w')   #file created like xxxyyy.gcode
+		seg_gcode_file = open((str(file) + '.gcd'),'w')   #file created like xxxyyy.gcode
 		print("Segmentaion gcode file: ",seg_gcode_file)
 		xlen = 0
 		ylen = 0
@@ -589,6 +598,14 @@ for xsegnum in range(xsegstart,xsegmax):
 		gcodefilescount = gcodefilescount +1
 		#time.sleep(1)
 print(gcodefilescount , "gcode file are successfully created.")
+# Removed when file doesnot have any data in side it
+cwdpath = os.getcwd()
+for gcdfile in os.listdir(cwdpath):
+	if gcdfile.endswith('.gcd'):
+		if os.path.getsize(gcdfile) == 0:
+			time.sleep(2) # two second delay
+			os.remove(gcdfile)
+			print(gcdfile,"file is delected from current working directory beacuse doesn't have any data in side file.")
 
 '''
 import os
