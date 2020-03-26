@@ -14,14 +14,14 @@
 #define DBG_SER_BAUD 115200 //For sending console messages to serial terminal.
 #define CMD_SER_BAUD 19200  //For receiving commands from master controller
 
-#define CFG_MOTORS_MAXSPEED 800
+#define CFG_MOTORS_MAXSPEED 1200
 #define CFG_MOTORS_MAXACCEL 200 
 
 #define TIMEOUT_READ_CMDPKT 1000
 #define DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS 1000
 
 #define SPMM  10.19 //Steps Per MilliMeter @Wheel dia:10cm, pulses/revoluton:3200
-#define SPD   48.35 //Steps per Degree rotation
+#define SPD   100.0//48.35 //Steps per Degree rotation
 
 //Command codes
 #define CMD_SETDIM     'D' //Set layout dimensions

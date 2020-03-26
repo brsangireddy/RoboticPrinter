@@ -114,7 +114,11 @@ void SetLayoutDimentions()
 void MoveCarriage()
 { 
   uint32_t dx,dy;
+  bool x_movement_required = true;
+  bool y_movement_required = true;
+  
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
+  
   //SetupMotors();
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
@@ -123,6 +127,10 @@ void MoveCarriage()
   {
     req_pos_x = pos_x_max; //Restrict it to max value
   }
+  else if(req_pos_x < 0)
+  {
+    req_pos_x = 0; //Restrict it to max value
+  }
   memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ);//read val string characters to val_array
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);//convert to integer
   req_pos_y = (uint32_t)uData.f;
@@ -130,6 +138,11 @@ void MoveCarriage()
   {
     req_pos_y = pos_y_max;//Restrict it to max value  
   }
+  else if(req_pos_y < 0)
+  {
+    req_pos_y = 0;//Restrict it to min/0 value  
+  }
+  
   Serial.print("Current pos x,y (mm): (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.println(")");  
   Serial.print("Request pos x,y (mm): (");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
 
@@ -152,7 +165,8 @@ void MoveCarriage()
   }
   else
   {
-    Serial.println("No movement required");
+    Serial.println("No movement required in x-direction.");
+    x_movement_required = false;
   }
   //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
   action_pending = true;//There is a followup action for the carriage to move in y-direction after moving in x-direction.
@@ -165,7 +179,7 @@ void MoveCarriage()
     PendingActionConfigMotors = ConfigMotorsToMoveForward;
   }
   //else if(dy < 0.0)
-  else if(req_pos_x < cur_pos_x)
+  else if(req_pos_y < cur_pos_y)
   {
     dy = cur_pos_y - req_pos_y;
     pending_action_wheel_steps = (uint32_t)((float)dy*SPMM);
@@ -174,12 +188,17 @@ void MoveCarriage()
   }
   else
   {
-    Serial.println("No pending movement.");
+    Serial.println("No pending/y-movement.");
     action_pending = false;
+    y_movement_required = false;
   }
   cur_pos_x = req_pos_x;
   cur_pos_y = req_pos_y;
-  //CmdSerial.write(CMD_ACK);//Send acknoledgement for goto command.
+
+  if((x_movement_required == false) && (y_movement_required == false))
+  {
+    CmdSerial.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
+  }
 }
 /***************************************************************************************************************************
  * 
@@ -329,6 +348,7 @@ void RunMotors()
                                 //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
                                 //This reply is required because GOTO/ROTATE will take some time to complete.
                                 //Other commands will finish immediately. No need for master to wait.
+      Serial.println("ACK sent from RunMotors()");
       ack_nack_sent = true;
     }
   }  
@@ -406,8 +426,8 @@ void ConfigMotorsToRotateRight()
 {
   Serial.println("Configuring for rotate right.");
   LeftFrontWheel.moveTo(wheel_steps);
-  LeftBackWheel.moveTo(-wheel_steps);
-  RightFrontWheel.moveTo(wheel_steps);
+  LeftBackWheel.moveTo(wheel_steps);
+  RightFrontWheel.moveTo(-wheel_steps);
   RightBackWheel.moveTo(-wheel_steps);
 }
 
@@ -415,40 +435,40 @@ void ConfigMotorsToRotateLeft()
 {
   Serial.println("Configuring for rotate left.");
   LeftFrontWheel.moveTo(-wheel_steps);
-  LeftBackWheel.moveTo(wheel_steps);
-  RightFrontWheel.moveTo(-wheel_steps);
-  RightBackWheel.moveTo(wheel_steps);
-}
-void ConfigMotorsToMoveSidewaysRight() 
-{
-  Serial.println("Configuring for moving right side.");
-  LeftFrontWheel.moveTo(wheel_steps);
-  LeftBackWheel.moveTo(wheel_steps);
+  LeftBackWheel.moveTo(-wheel_steps);
   RightFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
 void ConfigMotorsToMoveSidewaysLeft() 
 {
-  Serial.println("Configuring for moving left side.");
+  Serial.println("Configuring for moving right side.");
   LeftFrontWheel.moveTo(-wheel_steps);
+  LeftBackWheel.moveTo(wheel_steps);
+  RightFrontWheel.moveTo(wheel_steps);
+  RightBackWheel.moveTo(-wheel_steps);
+}
+void ConfigMotorsToMoveSidewaysRight() 
+{
+  Serial.println("Configuring for moving left side.");
+  LeftFrontWheel.moveTo(wheel_steps);
   LeftBackWheel.moveTo(-wheel_steps);
   RightFrontWheel.moveTo(-wheel_steps);
-  RightBackWheel.moveTo(-wheel_steps);
+  RightBackWheel.moveTo(wheel_steps);
 }
 void ConfigMotorsToMoveForward() 
 {
   Serial.println("Configuring for moving forward.");
   LeftFrontWheel.moveTo(-wheel_steps);
-  LeftBackWheel.moveTo(wheel_steps);
-  RightFrontWheel.moveTo(wheel_steps);
+  LeftBackWheel.moveTo(-wheel_steps);
+  RightFrontWheel.moveTo(-wheel_steps);
   RightBackWheel.moveTo(-wheel_steps);
 }
 void ConfigMotorsToMoveBackward() 
 {
   Serial.println("Configuring for moving backward.");
   LeftFrontWheel.moveTo(wheel_steps);
-  LeftBackWheel.moveTo(-wheel_steps);
-  RightFrontWheel.moveTo(-wheel_steps);
+  LeftBackWheel.moveTo(wheel_steps);
+  RightFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
 void ConfigMotorsToMoveLeftForward() 
