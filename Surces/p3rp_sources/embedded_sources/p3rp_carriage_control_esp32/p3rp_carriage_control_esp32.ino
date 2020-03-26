@@ -1,11 +1,10 @@
-/*********************************************************************
- This is a software for Laser Becaon Module
- Written by Dr Azam, Date : 18th july 2019
- Laser Beacon on Nano Controller
- Serial port to give commands
- Sfot Serial Port connect to laser
-*********************************************************************/
-
+/***************************************************************************************************
+ This is software for Mecanum wheel carriage control Module
+ Written by Bhaskar Date : 26th March, 2020
+ Mecanum wheel driver controlled by 30-pin ESP32 DOIT dev kit ver 1.0
+ Serial port (UART0) to print debug messages
+ Serial2 port (UART2) connect to master controller and receive commands and send responses
+*****************************************************************************************************/
 #include "p3rp_carriage_control.h"
 
 // ************* Setup functions *************************
@@ -28,7 +27,7 @@ void loop(void)
   uint8_t read_indx = 0;
 
   memset(cmd_buf,0,CMD_BUF_SZ+1);
-  if(CmdSerial.available())
+  if(Serial2.available())
   {
     read_indx = ReadCommand(TIMEOUT_READ_CMDPKT);
   }
@@ -58,7 +57,7 @@ void SetupVariables()
 void SetupSerial()
 { 
   Serial.begin(DBG_SER_BAUD);    //For sending console messages to Serial Termial on PC
-  CmdSerial.begin(CMD_SER_BAUD); //For receiving control commands & sending command replies
+  Serial2.begin(CMD_SER_BAUD); //For receiving control commands & sending command replies
 }
 
 void SetupPins()
@@ -197,7 +196,7 @@ void MoveCarriage()
 
   if((x_movement_required == false) && (y_movement_required == false))
   {
-    CmdSerial.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
+    Serial2.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
   }
 }
 /***************************************************************************************************************************
@@ -229,7 +228,7 @@ void RotateCarriage()
   {
     Serial.println("Unknown rotation direction.");
   }
-  //CmdSerial.write(CMD_ACK);//Send acknoledgement for rotate command.
+  //Serial2.write(CMD_ACK);//Send acknoledgement for rotate command.
 }
 
 /*************************************************************************************************************************
@@ -252,7 +251,7 @@ void EnableDisableMotors()
   {
     Serial.println("Unknown Command!!");
   }
-  //CmdSerial.write(CMD_ACK);
+  //Serial2.write(CMD_ACK);
 }
 
 void SetMotorsSpeed()
@@ -267,7 +266,7 @@ void SetMotorsSpeed()
   LeftBackWheel.setSpeed(s_speed);
   RightFrontWheel.setSpeed(s_speed);
   RightBackWheel.setSpeed(s_speed);
-  //CmdSerial.write(CMD_ACK);
+  //Serial2.write(CMD_ACK);
 }
 
 void SetMotorsAcceleration()
@@ -282,7 +281,7 @@ void SetMotorsAcceleration()
   LeftBackWheel.setAcceleration(s_accel);
   RightFrontWheel.setAcceleration(s_accel);
   RightBackWheel.setAcceleration(s_accel);
-  //CmdSerial.write(CMD_ACK);
+  //Serial2.write(CMD_ACK);
 }
 
 void SetupMotors()
@@ -304,7 +303,7 @@ void StopCarriage() // Cmd format:!3X00000000000000000
 {
   ResetMotors();
   Serial.println("Emergency Stop!!");
-  //CmdSerial.write(CMD_ACK);
+  //Serial2.write(CMD_ACK);
 }
  
 
@@ -344,7 +343,7 @@ void RunMotors()
     {
       ResetMotors();
       Serial.println("Carriage Movement completed.");
-      CmdSerial.write(CMD_ACK); //Send reply to master controller to go ahead with another command.
+      Serial2.write(CMD_ACK); //Send reply to master controller to go ahead with another command.
                                 //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
                                 //This reply is required because GOTO/ROTATE will take some time to complete.
                                 //Other commands will finish immediately. No need for master to wait.
@@ -365,9 +364,9 @@ uint16_t SelfTest()
 
 void DisplayFwVersion() // Format is !2V
 {  
-  CmdSerial.println(CARCON_VERSION_STR); //Send version string to master controller
+  Serial2.println(CARCON_VERSION_STR); //Send version string to master controller
   Serial.println(CARCON_VERSION_STR);    //For console display
-  //CmdSerial.write(CMD_ACK);
+  //Serial2.write(CMD_ACK);
 }
 
 /**************************************************************************************************************** 
@@ -384,9 +383,9 @@ uint8_t  ReadCommand(uint16_t timeout)
     {
       break;
     }
-    while (CmdSerial.available()) 
+    while (Serial2.available()) 
     {
-      char c =  CmdSerial.read();
+      char c =  Serial2.read();
       if(c == '!')
       {
         reply_indx = 0;

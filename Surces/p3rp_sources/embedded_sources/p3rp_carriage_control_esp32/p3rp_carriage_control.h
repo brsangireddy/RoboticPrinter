@@ -1,16 +1,15 @@
 #ifndef P3RP_CARRIAGE_CONTROL_H
 #define P3RP_CARRIAGE_CONTROL_H
-
+/***********************************************************************************************************
+ * 30-pin DOIT dev kit v1.0 is used in this development 
+ **********************************************************************************************************/
 #include <string.h>
 #include <AccelStepper.h>
-#include <SoftwareSerial.h>
 
 #define CARCON_VERSION_STR "Carriage Controller FW Ver:1.0.0.0"
 
-#define ENDIS_MOTORS_PIN 4 //Pin number on Arduino nano for ENable/DISabling motors 0:enable,1:disable
+#define ENDIS_MOTORS_PIN 15 //Pin number on ESP32 for ENable/DISabling motors 0:enable,1:disable
 
-#define CMD_SER_RX 3 //D3 as Rx for receiving control commands
-#define CMD_SER_TX 2 //D2 as Tx for sending reply for commands
 #define DBG_SER_BAUD 115200 //For sending console messages to serial terminal.
 #define CMD_SER_BAUD 19200  //For receiving commands from master controller
 
@@ -81,13 +80,11 @@ bool ack_nack_sent = false;
 void (*PendingActionConfigMotors)(void);
 
 //Instantiate stepper motor objects for four wheels. arguments:(1,dir_pin,step_pulse_pin) 
-//1st argument is fixed as 1 in all. 2nd is for direction pin number, 3rd is for step pulse pin number of arduino nano
-AccelStepper LeftFrontWheel(1, 5, 6);//(1, 11, 12); //Set D5:dir, D6:step pulse pins for left side front wheel stepper motor
-AccelStepper LeftBackWheel(1, 7, 8);//(1, 9, 10);   //Set D7:dir, D8:step pulse pin for left side back wheel stepper motor
-AccelStepper RightBackWheel(1, 9, 10);//(1, 7, 8);   //Set D9:dir, D10:step pulse pins for right side back wheel stepper motor
-AccelStepper RightFrontWheel(1, 11, 12);//(1, 5, 6);  //Set D11:dir, D12:step pulse pins for right side front wheel stepper motor
-
-SoftwareSerial CmdSerial(CMD_SER_RX, CMD_SER_TX);
+//1st argument is fixed as 1 in all. 2nd is for direction pin number, 3rd is for step pulse pin number of ESP32 DOIT dev kit v1.0
+AccelStepper LeftFrontWheel(1, 2, 4);   //Set D2:dir, D4:step pulse pins for left side front wheel stepper motor
+AccelStepper LeftBackWheel(1, 5, 18);   //Set D5:dir, D18:step pulse pin for left side back wheel stepper motor
+AccelStepper RightBackWheel(1, 19, 21); //Set D19:dir, D21:step pulse pins for right side back wheel stepper motor
+AccelStepper RightFrontWheel(1, 22, 23);//Set D22:dir, D23:step pulse pins for right side front wheel stepper motor
 
 union 
 {
