@@ -101,6 +101,7 @@ int32_t y_motor_steps = 0;
 float x_motor_speed = CFG_XMOTOR_SPEED;
 float y_motor_speed = CFG_YMOTOR_SPEED;
 bool ack_nack_sent   = false;
+bool phc_movement_required = false;
 
 Servo MarkerUpDownServo; //Pen control servo
 

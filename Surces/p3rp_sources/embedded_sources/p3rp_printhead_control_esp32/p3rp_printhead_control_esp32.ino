@@ -265,9 +265,15 @@ void SetPrintheadCarriagePosition()
   }
   cur_pos_x = req_pos_x;
   cur_pos_y = req_pos_y;
+  MarkerOff();
   if((x_movement_required == false) && (y_movement_required == false))//when there is no x & y movement, send ACK here
   {
     Serial2.write(CMD_RESP_ACK);//Send acknoledgement for goto command.
+    phc_movement_required = false;
+  }
+  else
+  {
+    phc_movement_required = true;
   }
 }
 /**********************************************************************************************************
@@ -357,6 +363,7 @@ void MovePrintheadCarriageByDistance()
   {
     Serial.println("Sending ACK");
     Serial2.write(CMD_RESP_ACK);//Send acknoledgement here as it will not be sent from run motors.
+    phc_movement_required = false;
   }
   else//ACK will be sent from RunMotors(), after completing the steps.
   {
@@ -372,6 +379,7 @@ void MovePrintheadCarriageByDistance()
       //TurnOffPrinting();
       MarkerOff();
     }
+    phc_movement_required = true;
   }
 }
 
@@ -454,33 +462,38 @@ void StopCarriage() // Cmd format:!3X00000000000000000
 void RunMotors()
 {
   //Serial.print("X,Y motors to run steps: ");Serial.print(XdirMotor.distanceToGo());Serial.print(" ");Serial.println(YdirMotor.distanceToGo());
-  if((XdirMotor.distanceToGo() != -x_motor_steps) || (YdirMotor.distanceToGo() != -y_motor_steps))
+  if(phc_movement_required == true)
   {
-    //if(XdirMotor.distanceToGo() != -x_motor_steps)
-    if((XdirMotor.distanceToGo() != -x_motor_steps) && (x_motor_steps != 0))// && (digitalRead(X0_SENSOR_PIN) == LOW))//XMAX_SENSOR_PIN check to be added
+    if((XdirMotor.distanceToGo() != -x_motor_steps) || (YdirMotor.distanceToGo() != -y_motor_steps))
     {
-      XdirMotor.runSpeed();
+      //if(XdirMotor.distanceToGo() != -x_motor_steps)
+      if((XdirMotor.distanceToGo() != -x_motor_steps) && (x_motor_steps != 0))// && (digitalRead(X0_SENSOR_PIN) == LOW))//XMAX_SENSOR_PIN check to be added
+      {
+        XdirMotor.runSpeed();
+      }
+      //if(YdirMotor.distanceToGo() != -y_motor_steps)
+      if((YdirMotor.distanceToGo() != -y_motor_steps) && (y_motor_steps != 0))// && (digitalRead(Y0_SENSOR_PIN) == LOW))//YMAX_SENSOR_PIN check to be added
+      {
+        YdirMotor.runSpeed();
+      }
+      ack_nack_sent = false;
     }
-    //if(YdirMotor.distanceToGo() != -y_motor_steps)
-    if((YdirMotor.distanceToGo() != -y_motor_steps) && (y_motor_steps != 0))// && (digitalRead(Y0_SENSOR_PIN) == LOW))//YMAX_SENSOR_PIN check to be added
-    {
-      YdirMotor.runSpeed();
-    }
-    ack_nack_sent = false;
-  }
-  else
-  {//All the actions are completed
-    if(ack_nack_sent == false)
-    {
-      //TurnOffPrinting();
-      MarkerOff();
-      ResetMotors();
-      Serial.println("ACK sent from RunMotors().");
-      Serial2.write(CMD_RESP_ACK); //Send reply to master controller to go ahead with another command.
-                                //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
-                                //This reply is required because GOTO/ROTATE will take some time to complete.
-                                //Other commands will finish immediately. No need for master to wait.
-      ack_nack_sent = true;     //To send ACK only once per move command
+    else
+    {//All the actions are completed
+      if(ack_nack_sent == false)
+      {
+        //TurnOffPrinting();
+        MarkerOff();
+        ResetMotors();
+        Serial.println("ACK sent from RunMotors().");
+        Serial2.write(CMD_RESP_ACK); //Send reply to master controller to go ahead with another command.
+                                  //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
+                                  //This reply is required because GOTO/ROTATE will take some time to complete.
+                                  //Other commands will finish immediately. No need for master to wait.
+        ack_nack_sent = true;     //To send ACK only once per move command
+        phc_movement_required = false;
+        //ResetMotors();
+      }
     }
   }
 }
