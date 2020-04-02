@@ -18,8 +18,8 @@
 //#define SERVO_FREQ_HZ     1000
 //#define SERVO_RESOLUTION_BITS  8
 
-#define MARKER_UP_ANG  0
-#define MARKER_DOWN_ANG 90
+#define MARKER_OFF_ANG  0 //Lift up
+#define MARKER_ON_ANG 90 //Push down
 
 #define POS_X_MAX 457//1.5' //640 //mm (=64cm)
 #define POS_Y_MAX 305//1.0' //380 //mm (=38cm)

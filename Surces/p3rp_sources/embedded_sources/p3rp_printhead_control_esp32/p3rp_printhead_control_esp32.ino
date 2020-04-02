@@ -599,13 +599,13 @@ void ConfigYdirMotorToMoveBackward()
 void MarkerOn()
 {
   //ledcWrite(SERVO_CHANNEL, 0);
-  MarkerUpDownServo.write(MARKER_UP_ANG);
+  MarkerUpDownServo.write(MARKER_ON_ANG);
   delay(100);
 }
 
 void MarkerOff()
 {
   //ledcWrite(SERVO_CHANNEL, 128);
-  //MarkerUpDownServo.write(MARKER_UP_ANG);
+  MarkerUpDownServo.write(MARKER_OFF_ANG);
   delay(100); 
 }
