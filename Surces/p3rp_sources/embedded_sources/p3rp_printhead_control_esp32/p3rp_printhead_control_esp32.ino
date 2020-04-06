@@ -21,6 +21,7 @@ void setup(void)
   {
     Serial.println("Printhead Carriage Controller Ready!!!");
   }
+  Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
 /*
 ledcWrite(SERVO_CHANNEL,255);
 while(1)
@@ -72,6 +73,7 @@ void SetupVariables()
   y_motor_steps = 0;
   x_motor_speed = CFG_XMOTOR_SPEED;
   y_motor_speed = CFG_YMOTOR_SPEED;
+  phc_movement_required = false;
 }
 void SetupSerial()
 { 
@@ -621,4 +623,37 @@ void MarkerOff()
   //ledcWrite(SERVO_CHANNEL, 128);
   MarkerUpDownServo.write(MARKER_OFF_ANG);
   delay(100); 
+}
+
+void DrawLine()
+{
+  int32_t cpx,cpy;
+  int32_t p1x,p1y;
+  int32_t p2x,p2y;
+  uint32_t dist_cp_p1, dist_cp_p2, dist_p1_p2;
+
+  dist_cp_p1 = (uint32_t)sqrt(sq(p1x-cpx)+sq(p1y-cpy));
+  dist_cp_p2 = (uint32_t)sqrt(sq(p2x-cpx)+sq(p2y-cpy));
+
+  if(dist_cp_p1 >= dist_cp_p2)
+  {
+    MarkerOff();
+    MoveTo(p2x, p2y);
+    MarkerOn();
+    MoveTo(p1x, p1y);
+    MarkerOff();    
+  }
+  else
+  {
+    MarkerOff();
+    MoveTo(p1x, p1y);
+    MarkerOn();
+    MoveTo(p2x, p2y);
+    MarkerOff();        
+  }
+}
+
+void MoveTo(int32_t x, int32_t y)
+{
+  
 }
