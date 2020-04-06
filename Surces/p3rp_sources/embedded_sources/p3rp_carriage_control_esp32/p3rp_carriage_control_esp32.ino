@@ -45,14 +45,18 @@ void SetupVariables()
   pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
   cur_pos_x = 0; //current x position of the carriage in the layout
   cur_pos_y = 0; //current y position of the carriage in the layout
+  cur_ang = 0.0;
+  corner_num = 0; 
+  this_layout_xmax = 0;
+  this_layout_ymax = 0;
   req_pos_x = 0; //requested new position x of the carriage in the layout
   req_pos_y = 0; //requested new position y of the carriage in the layout
-  rot_degs  = 0;
   rot_dir   = MODE_ROT_DIR_CW; //Clockwise (default)
   ack_nack_sent  = false;
   action_pending = false;
   wheel_steps    = 0;
   pending_action_wheel_steps = 0;
+  carriage_movement_required = false;
 }
 void SetupSerial()
 { 
@@ -110,6 +114,7 @@ void SetLayoutDimentions()
   pos_y_max = uData.f;                             //get float value  
   Serial.print("Layout Dim x,y (mm): (");Serial.print(pos_x_max);Serial.print(",");Serial.print(pos_y_max);Serial.println(")");    
 }
+/*
 void MoveCarriage()
 { 
   uint32_t dx,dy;
@@ -199,36 +204,193 @@ void MoveCarriage()
     Serial2.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
   }
 }
+*/
+
+void MoveCarriage()
+{ 
+  uint32_t dx,dy,swap_temp;
+  bool x_movement_required = true;
+  bool y_movement_required = true;
+  carriage_movement_required = true;
+  
+  char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
+  
+  //SetupMotors();
+  memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
+  uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+  req_pos_x = (uint32_t)uData.f;
+  if(req_pos_x > pos_x_max)
+  {
+    req_pos_x = pos_x_max; //Restrict it to max value
+  }
+  else if(req_pos_x < 0)
+  {
+    req_pos_x = 0; //Restrict it to max value
+  }
+  memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ);//read val string characters to val_array
+  uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);//convert to integer
+  req_pos_y = (uint32_t)uData.f;
+  if(req_pos_y > pos_y_max)
+  {
+    req_pos_y = pos_y_max;//Restrict it to max value  
+  }
+  else if(req_pos_y < 0)
+  {
+    req_pos_y = 0;//Restrict it to min/0 value  
+  }
+
+  switch(corner_num)
+  {
+    case 1:
+      swap_temp = req_pos_x;
+      req_pos_x = req_pos_y;
+      req_pos_y = swap_temp;
+      break;
+    case 2:
+      req_pos_y = this_layout_ymax - req_pos_y;
+      break;
+    case 3:
+      req_pos_y = this_layout_xmax - req_pos_x;
+      req_pos_x = this_layout_xmax;
+      break;
+    case 0:          
+      break;      
+  }
+
+  
+  Serial.print("Current pos x,y (mm): (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.println(")");  
+  Serial.print("Request pos x,y (mm): (");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
+
+  //Move carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by wheel_steps
+  //if(dx > 0.0)
+  if(req_pos_x > cur_pos_x)
+  {
+    dx = req_pos_x - cur_pos_x;
+    wheel_steps = (uint32_t)((float)dx*SPMM);
+    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" X-dir wheel_steps:");Serial.println(wheel_steps);
+    ConfigMotorsToMoveSidewaysRight();
+  }
+  //else if(dx < 0.0)
+  else if(req_pos_x < cur_pos_x)
+  {
+    dx = cur_pos_x - req_pos_x;
+    wheel_steps = (uint32_t)((float)dx*SPMM);
+    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" X-dir wheel_steps:");Serial.println(wheel_steps);
+    ConfigMotorsToMoveSidewaysLeft();
+  }
+  else
+  {
+    Serial.println("No movement required in x-direction.");
+    x_movement_required = false;
+  }
+  //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
+  action_pending = true;//There is a followup action for the carriage to move in y-direction after moving in x-direction.
+  //if(dy > 0.0)
+  if(req_pos_y > cur_pos_y)
+  {
+    dy = req_pos_y - cur_pos_y;
+    pending_action_wheel_steps = (uint32_t)((float)dy*SPMM);
+    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" Y-dir wheel_steps:");Serial.println(pending_action_wheel_steps);
+    PendingActionConfigMotors = ConfigMotorsToMoveForward;
+  }
+  //else if(dy < 0.0)
+  else if(req_pos_y < cur_pos_y)
+  {
+    dy = cur_pos_y - req_pos_y;
+    pending_action_wheel_steps = (uint32_t)((float)dy*SPMM);
+    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" Y-dir wheel_steps:");Serial.println(pending_action_wheel_steps);
+    PendingActionConfigMotors = ConfigMotorsToMoveBackward;
+  }
+  else
+  {
+    Serial.println("No pending/y-movement.");
+    action_pending = false;
+    y_movement_required = false;
+  }
+  cur_pos_x = req_pos_x;
+  cur_pos_y = req_pos_y;
+
+  if((x_movement_required == false) && (y_movement_required == false))
+  {
+    carriage_movement_required = false;
+    Serial2.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
+  }
+}
+
 /***************************************************************************************************************************
  * 
  ***************************************************************************************************************************/
 void RotateCarriage()
 {
+  uint32_t swap_temp;
+  float rot_deg = 0.0, rot_min = 0.0;
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
+  carriage_movement_required = true;
   SetupMotors();
   rot_dir = cmd_buf[INDX_MODE];
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  rot_degs = uData.f;
-  Serial.print("Req rot deg:");Serial.println(rot_degs);  
-  wheel_steps = rot_degs * SPD;
+  rot_deg = uData.f;
+  memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ);
+  uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+  rot_min = uData.f;
+  rot_deg = rot_deg + rot_min/60.0;
+  Serial.print("Req rot deg:");Serial.println(rot_deg);    
+  wheel_steps = rot_deg * SPD;
   action_pending = false; //No followup action for rotate command is expected
-  Serial.print("Rotate carriage by (deg):");Serial.print(rot_degs);Serial.print("/wheel_steps:");Serial.print(wheel_steps);
-  if(rot_dir == MODE_ROT_DIR_CW)
+  Serial.print("Rotate carriage by (deg):");Serial.print(rot_deg);Serial.print("/wheel_steps:");Serial.print(wheel_steps);
+  if(rot_deg > 0.0)
   {
-    Serial.println(" clockwise.");  
-    ConfigMotorsToRotateRight();      
-  }
-  else if(rot_dir == MODE_ROT_DIR_ACW)
-  {
-    Serial.println(" anti-clockwise.");  
-    ConfigMotorsToRotateLeft();
+    if(rot_dir == MODE_ROT_DIR_CW)
+    {
+      Serial.println(" clockwise.");  
+      ConfigMotorsToRotateRight();
+      cur_ang = cur_ang + rot_deg;
+      if(cur_ang != 0.0)
+      {
+        corner_num = cur_ang/90; 
+      }
+      Serial.print("Carriage is at corner: ");Serial.println(corner_num);
+      switch(corner_num)
+      {
+        case 1:
+          this_layout_ymax = cur_pos_y;//Save ymax for this layout for future calculations
+          swap_temp = cur_pos_x;
+          cur_pos_x = cur_pos_y;
+          cur_pos_y = swap_temp;
+          break;
+        case 2:
+          this_layout_xmax = cur_pos_y;//Save xmax for this layout for future calculations
+          cur_pos_x = cur_pos_y;
+          cur_pos_y = 0;
+          break;
+        case 3:
+          req_pos_x = this_layout_xmax;
+          cur_pos_y = 0;
+          break;
+        case 0:          
+          break;      
+      }
+    }
+    else if(rot_dir == MODE_ROT_DIR_ACW)
+    {
+      Serial.println(" anti-clockwise.");  
+      ConfigMotorsToRotateLeft();
+      cur_ang = cur_ang - rot_deg;
+    }
+    else
+    {
+      carriage_movement_required = false;
+      Serial.println("Unknown rotation direction.");
+      Serial2.write(CMD_ACK);//Send acknoledgement for rotate command.
+    }
   }
   else
   {
-    Serial.println("Unknown rotation direction.");
+    carriage_movement_required = false;
+    Serial.println("Resquested 0° rotation.");
+    Serial2.write(CMD_ACK);//Send acknoledgement for rotate command.
   }
-  //Serial2.write(CMD_ACK);//Send acknoledgement for rotate command.
 }
 
 /*************************************************************************************************************************
@@ -261,7 +423,7 @@ void SetMotorsSpeed()
 
   memcpy(val_array, &cmd_buf[INDX_VAL1], VAL_STR_SZ);
   s_speed = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  Serial.print("Setting Wheel Speed to: ");Serial.println(s_speed);
+  //Serial.print("Setting Wheel Speed to: ");Serial.println(s_speed);
   LeftFrontWheel.setSpeed(s_speed);
   LeftBackWheel.setSpeed(s_speed);
   RightFrontWheel.setSpeed(s_speed);
@@ -276,7 +438,7 @@ void SetMotorsAcceleration()
 
   memcpy(val_array, &cmd_buf[INDX_VAL1], VAL_STR_SZ);
   s_accel = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  Serial.print("Setting acceleration to: ");Serial.println(s_accel);
+  //Serial.print("Setting acceleration to: ");Serial.println(s_accel);
   LeftFrontWheel.setAcceleration(s_accel);
   LeftBackWheel.setAcceleration(s_accel);
   RightFrontWheel.setAcceleration(s_accel);
@@ -286,12 +448,12 @@ void SetMotorsAcceleration()
 
 void SetupMotors()
 {
-  Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
+  //Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
   LeftFrontWheel.setMaxSpeed(CFG_MOTORS_MAXSPEED);
   LeftBackWheel.setMaxSpeed(CFG_MOTORS_MAXSPEED);
   RightFrontWheel.setMaxSpeed(CFG_MOTORS_MAXSPEED);
   RightBackWheel.setMaxSpeed(CFG_MOTORS_MAXSPEED);
-  Serial.print("Setting Motors Max Acceleration to: ");Serial.println(CFG_MOTORS_MAXACCEL);
+  //Serial.print("Setting Motors Max Acceleration to: ");Serial.println(CFG_MOTORS_MAXACCEL);
   LeftFrontWheel.setAcceleration(CFG_MOTORS_MAXACCEL);
   LeftBackWheel.setAcceleration(CFG_MOTORS_MAXACCEL);
   RightFrontWheel.setAcceleration(CFG_MOTORS_MAXACCEL);
@@ -312,43 +474,39 @@ void StopCarriage() // Cmd format:!3X00000000000000000
  **************************************************************************************************************/
 void RunMotors()
 {
-  if((LeftFrontWheel.distanceToGo() != 0) || (RightFrontWheel.distanceToGo() != 0) || (LeftBackWheel.distanceToGo() != 0) || (RightBackWheel.distanceToGo() != 0))
+  if(carriage_movement_required == true)
   {
-//    Serial.print("Distance to go:");
-//    Serial.print(LeftFrontWheel.distanceToGo());
-//    Serial.print(",");
-//    Serial.print(RightFrontWheel.distanceToGo());
-//    Serial.print(",");
-//    Serial.print(LeftBackWheel.distanceToGo());
-//    Serial.print(",");
-//    Serial.println(RightBackWheel.distanceToGo());
-    LeftFrontWheel.run();
-    LeftBackWheel.run();
-    RightFrontWheel.run();
-    RightBackWheel.run();
-    ack_nack_sent = false;
-  }
-  else if(action_pending == true)
-  {
-    ResetMotors();
-    wheel_steps = pending_action_wheel_steps;
-    Serial.print("pending_action_wheel_steps: ");Serial.println(wheel_steps);
-    delay(DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS);
-    PendingActionConfigMotors();
-    action_pending = false;    
-  }
-  else
-  {//All the actions are completed
-    if(ack_nack_sent != true)
+    if((LeftFrontWheel.distanceToGo() != 0) || (RightFrontWheel.distanceToGo() != 0) || (LeftBackWheel.distanceToGo() != 0) || (RightBackWheel.distanceToGo() != 0))
+    {
+      LeftFrontWheel.run();
+      LeftBackWheel.run();
+      RightFrontWheel.run();
+      RightBackWheel.run();
+      ack_nack_sent = false;
+    }
+    else if(action_pending == true)
     {
       ResetMotors();
-      Serial.println("Carriage Movement completed.");
-      Serial2.write(CMD_ACK); //Send reply to master controller to go ahead with another command.
-                                //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
-                                //This reply is required because GOTO/ROTATE will take some time to complete.
-                                //Other commands will finish immediately. No need for master to wait.
-      Serial.println("ACK sent from RunMotors()");
-      ack_nack_sent = true;
+      wheel_steps = pending_action_wheel_steps;
+      Serial.print("pending_action_wheel_steps: ");Serial.println(wheel_steps);
+      delay(DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS);
+      PendingActionConfigMotors();
+      action_pending = false;    
+    }
+    else
+    {//All the actions are completed
+      if(ack_nack_sent != true)
+      {
+        ResetMotors();
+        Serial.println("Carriage Movement completed.");
+        Serial2.write(CMD_ACK); //Send reply to master controller to go ahead with another command.
+                                  //Master will be waiting untill 'F' is received when GOTO/ROTATE commands are issued to this module
+                                  //This reply is required because GOTO/ROTATE will take some time to complete.
+                                  //Other commands will finish immediately. No need for master to wait.
+        Serial.println("ACK sent from RunMotors()");
+        ack_nack_sent = true;
+        carriage_movement_required = false;
+      }
     }
   }  
 }
@@ -357,15 +515,17 @@ void RunMotors()
  ****************************************************************************************************************/
 uint16_t SelfTest()
 {
+  Serial.println();
   Serial.println(CARCON_VERSION_STR);
+  Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
   //Other self test features to be implemented
   return(P3RP_SUCCESS);
 }
 
 void DisplayFwVersion() // Format is !2V
 {  
-  Serial2.println(CARCON_VERSION_STR); //Send version string to master controller
-  Serial.println(CARCON_VERSION_STR);    //For console display
+  //Serial2.println(CARCON_VERSION_STR); //Send version string to master controller
+  Serial.print(CARCON_VERSION_STR);Serial.print(" ");Serial.print("Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
   //Serial2.write(CMD_ACK);
 }
 

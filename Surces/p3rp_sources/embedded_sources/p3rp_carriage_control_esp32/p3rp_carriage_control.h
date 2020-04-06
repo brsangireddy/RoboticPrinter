@@ -66,16 +66,20 @@
 char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 to hold null character
 uint32_t pos_x_max = 91440; //1ft=304.8mm, 300ft=91440mm
 uint32_t pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t this_layout_xmax = 0;
+uint32_t this_layout_ymax = 0;
 uint32_t cur_pos_x = 0; //current x position of the carriage in the layout
 uint32_t cur_pos_y = 0; //current y position of the carriage in the layout
+float cur_ang = 0.0;    //Rotation angle (degrees)of the carriage from initial (power-on) position
+uint8_t corner_num = 0; 
 uint32_t req_pos_x = 0; //requested new position x of the carriage in the layout
 uint32_t req_pos_y = 0; //requested new position y of the carriage in the layout
-float rot_degs     = 0.0;
 char  rot_dir      = MODE_ROT_DIR_CW; //Clockwise (default)
 uint32_t wheel_steps = 0;
 uint32_t pending_action_wheel_steps = 0;
 bool action_pending = false;
 bool ack_nack_sent = false;
+bool carriage_movement_required = false;
 
 void (*PendingActionConfigMotors)(void);
 
