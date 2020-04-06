@@ -31,6 +31,9 @@
 #define SP_S3   19
 
 #define BUZZER_PIN 12
+#define LASERX_IDENTIFY_PIN 13
+
+#define IDENTIFY_BLINKS_COUNT 3
 
 #define TGT_CARRIAGE_CON  '1'
 #define TGT_PRINTHEAD_CON '2' //previously on-chassis rear stepper motor
@@ -60,6 +63,8 @@
 #define CMD_ROTATE  'R' //Clockwise/Anticlockwise, deg, min (CMD='R', MODE='A'/'C' (AntiCW/Clockwise), VAL1=deg, VAL2=min in command string)
 #define CMD_UNKNOWN 'U' //Unknown command
 
+#define CMD_RESP_ACK 'A'
+#define CMD_RESP_NACK 'N'
 
 //Direction related constants & strings
 #define DIR_CLOCKWISE 'C'
@@ -104,7 +109,9 @@ char segfile_path_name[]="/jjxxxyyyy.gcd";
 #define FILE_NAME_START_INDX 0//24
 #define FILE_NAME_SZ 14 //one character for '/', 8 characters for name, one for '.', 3 for extension 'gcd', 1 for null termination
 
-IPAddress ftp_server(192,168,0,3);//FTP server IP address
+uint8_t ftps_ip[4] = {192, 168, 0, 3};
+IPAddress ftp_server(ftps_ip[0], ftps_ip[1], ftps_ip[2], ftps_ip[3]);//(192,168,0,2);//FTP server IP address
+
 #define FTP_PORT 21
 char ftp_user[32] = "ftp";
 char ftp_pwd[32] = "guest";
@@ -115,6 +122,7 @@ WiFiClient dclient; //for reading/writing data over ftp
 
 #define X_MOTION '1'//0x31
 #define Y_MOTION '2'//0x32
+#define PEN_ON   '4' //0x34
 
 #define RESULT_SUCCESS 1
 #define RESULT_ERROR   0

@@ -97,6 +97,7 @@ void HndCarriageControlCmd()
  ********************************************************************************************/
 void ProcessCarriageControlCmd()
 {
+  uint8_t ack_nack = CMD_RESP_NACK;
   char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 for holding null char.
   SelectSerialPort(CARRIAGE_COM_PORT);
   cmd_buf[INDX_SOCF] = SOCF;             //Start of command or command qualifier
@@ -135,21 +136,35 @@ void ProcessCarriageControlCmd()
       }      
       break;
     case CMD_ROTATE:
-      float dec_part = 0.0f; 
+      //float dec_part = 0.0f; 
       cmd_buf[INDX_MODE] = car_rot_dir;
-      car_posX_rotDeg = car_posX_rotDeg + car_posY_rotMin/60.0; //convert everything to degrees and send to reduce computing on nano
-      dec_part = car_posX_rotDeg - (uint32_t)car_posX_rotDeg;
-      car_posX_rotDeg = (uint32_t)car_posX_rotDeg%360 + dec_part; //Restrict rotation to 360 deg. 
-      car_posY_rotMin = 0.0;
-      Serial.print("Carriage rotation deg/dir: ");Serial.print(car_posX_rotDeg);Serial.print("/");Serial.println(car_rot_dir);
+//      car_posX_rotDeg = car_posX_rotDeg + car_posY_rotMin/60.0; //convert everything to degrees and send to reduce computing at carriage side
+//      dec_part = car_posX_rotDeg - (uint32_t)car_posX_rotDeg;
+//      car_posX_rotDeg = (uint32_t)car_posX_rotDeg%360 + dec_part; //Restrict rotation to 360 deg. 
+//      car_posY_rotMin = 0.0;
+      Serial.print("Rotate Carriage by: ");Serial.print(car_posX_rotDeg);Serial.print("°");Serial.print(car_posY_rotMin);Serial.print("'");Serial.println(car_rot_dir);
       break;
   }
   uData.f = car_posX_rotDeg;
   sprintf(&cmd_buf[INDX_VAL1],"%08X",(uint32_t)uData.i); //write carriage goto position value x or rotate deg value to cmd buffer
   uData.f = car_posY_rotMin;
   sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i); //write carriage goto position value y or rotate min value to cmd buffer
+  Serial.println(cmd_buf);
+#if 1       
   Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ); //Send command string to carriage control module. Just send CMD_BUF_SZ.
-  Serial.println(cmd_buf); 
+  while(1)//Wait until ACK is received from print head controller
+  {       
+    if(Serial2.available()>0)
+    {
+      ack_nack = Serial2.read();
+      if(ack_nack == CMD_RESP_ACK)
+      {
+        break;
+      }
+    }
+    delay(100);
+  }
+#endif 
 }
 
 #endif /*P3RP_CARRIAGE_CONTROL*/

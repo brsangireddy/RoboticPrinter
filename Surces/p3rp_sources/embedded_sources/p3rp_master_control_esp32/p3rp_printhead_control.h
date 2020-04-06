@@ -105,6 +105,7 @@ void ProcessPrintHeadControlCmd()
 uint8_t PrintSegment()
 {
   File sfh; //segment file handle
+  uint8_t ack_nack = CMD_RESP_NACK;
   String gc_line = "";
   String sub_line = "";
   int32_t x_motion = 0;
@@ -129,23 +130,29 @@ uint8_t PrintSegment()
     y_motion = 0;
     cmd_buf[INDX_MODE] = 0;//Clear X,Y-motion flags in the command mode
 
-    x_indx = gc_line.indexOf('X');//returns -1 if X-motion is not present
+    if(gc_line.indexOf("G01") != -1)//If this is G01 code, pen should be ON. For G00 movement pen need not be turned ON
+    {
+      cmd_buf[INDX_MODE] |= PEN_ON;
+    }
+    x_indx = gc_line.indexOf('X');//returns -1 if X is not present
     if(x_indx != -1) 
     {
       sub_line = gc_line.substring(x_indx+1,gc_line.indexOf('\0')-1);
       x_motion = sub_line.toInt();
+      x_motion = x_motion * IN2MM; //Convert inches to millimeter
       cmd_buf[INDX_MODE] |= X_MOTION;
-      Serial.print("x = ");Serial.print(x_motion);Serial.print(" ");
+      //Serial.print("x = ");Serial.print(x_motion);Serial.print(" ");
     }
-    y_indx = gc_line.indexOf('Y');
-    if(y_indx != -1)//returns -1 if Y-motion is not present
+    y_indx = gc_line.indexOf('Y');//returns -1 if Y is not present
+    if(y_indx != -1)
     {
       sub_line = gc_line.substring(y_indx+1,gc_line.indexOf('\0')-1);
       y_motion = sub_line.toInt();
+      y_motion = y_motion * IN2MM;//convert inches to millimeter
       cmd_buf[INDX_MODE] |= Y_MOTION;
-      Serial.print("y = ");Serial.print(y_motion);
+      //Serial.print("y = ");Serial.print(y_motion);
     }    
-    Serial.println();
+    //Serial.println();
     //Send these values to print head control module in the frame packet.
     if((cmd_buf[INDX_MODE] & X_MOTION)||(cmd_buf[INDX_MODE] & Y_MOTION))
     {
@@ -157,11 +164,27 @@ uint8_t PrintSegment()
       sprintf(&cmd_buf[INDX_VAL1],"%08X",(uint32_t)uData.i);
       uData.f = y_motion;
       sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i);  
-      Serial.println(cmd_buf); //Print for local debugging 
-      //Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ);//Send command string to carriage control module
+      Serial.println(cmd_buf); //Print for local debugging
+#if 1       
+      Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ);//Send command string to carriage control module
+      delay(10);
+      while(1)//Wait till ACK is received from print head controller
+      {       
+        if(Serial2.available()>0)
+        {
+          ack_nack = Serial2.read();
+          if(ack_nack == CMD_RESP_ACK)
+          {
+            break;
+          }
+        }
+        delay(100);
+      }
+#endif
     }  
   }
   sfh.close();
+  //SPIFFS.remove(sfh.name());
   return RESULT_SUCCESS;
 }
 
