@@ -1,3 +1,17 @@
+'''
+Title: G-Code Generation from dxf file
+
+3/16/2020	generate segmented gcode for lines from dxf file 
+3/17/2020	generate segmented gcode for lines and arcs from dxf file
+3/18/2020	avoid repeatance values from circle and arc while reading dxf file
+			segmented gcode for dxf file(line,polyline,circle and arc)
+3/19/2020	segmentation matrix range using maximum x and y values from dxf file
+3/20/2020	remove presence gcd file from cwd
+			remove 0byte size files from cwd
+			add job id using command line arguments
+4/11/2020   add gcode "G00 X0 Y0" when the .gcd file empty(0byte) from cwd
+'''
+
 import os
 import sys
 import math
@@ -5,7 +19,7 @@ import time
 openfile = sys.argv[1]
 
 #Segmentation Dimensions and variable
-seglen = 18
+seglen = 12
 segwidth = 12
 #layoutxmax = 108 #sys.argv[2]
 #layoutymax = 72 #sys.argv[3]
@@ -14,7 +28,7 @@ segwidth = 12
 #file_format = '00'
 xsegstart = 0
 ysegstart = 0
-jobid = '01'
+jobid = sys.argv[2]#job Id like '01' 
 #xsegmax = layoutxmax //seglen
 #ysegmax = layoutymax // segwidth
 #print(xsegmax,ysegmax)
@@ -114,7 +128,7 @@ while True: #### Main DXF read loop ####
 				filereadline = filereadline.strip()
 				layoutzmax = float(filereadline) #Z maximum value
 				filereadline = "NOTHING"
-			if(filereadline == "9"):
+			if(filereadline == "9"): #Repeats for each header variable
 				break
 				
 	'''if(filereadline == '$INSUNITS'):
@@ -592,12 +606,23 @@ for xsegnum in range(xsegstart,xsegmax):
 		
 		print(gcode)
 		############################# Write gcode to file ###########################
-		seg_gcode_file.write(gcode)
+		seg_gcode_file.write(gcode)        
 		seg_gcode_file.close()
 		gcode = ""
 		gcodefilescount = gcodefilescount +1
 		#time.sleep(1)
 print(gcodefilescount , "gcode file are successfully created.")
+# write dummy Gcode like "G00 X0 Y0" when the file is empty file.
+cwdpath = os.getcwd()
+for gcdfile in os.listdir(cwdpath):
+    if gcdfile.endswith('.gcd'):
+        if os.path.getsize(gcdfile) == 0: #gcd file is emptyfile
+            emptyfile = open(gcdfile,'w')
+            emptyfile.write('G00 X0 Y0') #if the file is empty then write "G00 X0 Y0" into it.
+            emptyfile.write('\n')
+            emptyfile.write('G01 X0 Y0')
+            emptyfile.close()
+'''
 # Removed when file doesnot have any data in side it
 cwdpath = os.getcwd()
 for gcdfile in os.listdir(cwdpath):
@@ -606,7 +631,7 @@ for gcdfile in os.listdir(cwdpath):
 			time.sleep(2) # two second delay
 			os.remove(gcdfile)
 			print(gcdfile,"file is delected from current working directory beacuse doesn't have any data in side file.")
-
+'''
 '''
 import os
 import sys
