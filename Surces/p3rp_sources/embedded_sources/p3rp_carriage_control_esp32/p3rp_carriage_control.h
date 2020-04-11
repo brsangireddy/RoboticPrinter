@@ -20,11 +20,12 @@
 #define DELAY_BETWEEN_CONSEQUTIVE_MOVEMENTS 1000
 
 #define SPMM  10.19 //Steps Per MilliMeter @Wheel dia:10cm, pulses/revoluton:3200
-#define SPD   100.0//48.35 //Steps per Degree rotation
+#define SPD   105.0//48.35 //Steps per Degree rotation
 
 //Command codes
 #define CMD_SETDIM     'D' //Set layout dimensions
 #define CMD_GOTO       'G' //Move carriage to new x,y positions
+#define CMD_MOVE       'M' //Move carriage by distance in cm_val1 in the direction specified in cmd_mode 
 #define CMD_ROTATE     'R' //Rotate carriage by degrees+minutes clockwise/anticlockwise
 #define CMD_ENDIS_MOTS 'E' //Enable/disable motors
 #define CMD_SETSPEED   'S' //Set max speed for the motors
@@ -41,21 +42,33 @@
 #define INDX_VAL1  4 //Index for Command value 1 (dist,angle, x_pos etc.)
 #define INDX_VAL2 12 //Index for Command value 2 (y_pos etc.)
 
-
-//Carriage/chassis rotate/turn direction codes
-#define MODE_ROT_DIR_CW     'C'
-#define MODE_ROT_DIR_ACW    'A'
-
 //Motors enable/disable codes
 #define MODE_ENABLE_MOTORS  'E'
 #define MODE_DISABLE_MOTORS 'D'
 
+//Set dimensions layout/segment
+#define MODE_SETDIM_LAYOUT  'L'
+#define MODE_SETDIM_SEGMENT 'S'
+
+//Modes for MOVE command
+//Carriage/chassis rotate/turn direction codes
+#define MODE_ROTATE_CLOCKWISE     'C'
+#define MODE_ROTATE_ANTICLOCKWISE 'A'
+#define MODE_MOVE_FORWARD         '1'
+#define MODE_MOVE_BACKWARD        '2'
+#define MODE_MOVE_SIDEWAYSRGIHT   '3'
+#define MODE_MOVE_SIDEWAYSLEFT    '4'
+#define MODE_MOVE_RIGHTFORWARD    '5'
+#define MODE_MOVE_LEFTFORWARD     '6'
+#define MODE_MOVE_RIGHTBACKWARD   '7'
+#define MODE_MOVE_LEFTBACKWARD    '8'
+
 //Error codes
-#define P3RP_SUCCESS 0
-#define P3RP_ERROR   1
+#define RESULT_SUCCESS 0
+#define RESULT_ERROR   1
 
 #define SOCF       '!' //Start Of Command Frame
-#define VAL_STR_SZ 8   //size of value string in command buffer (8 ascii characters) ex:0x12345678 comes as 12345678
+#define VAL_STR_SZ  8   //size of value string in command buffer (8 ascii characters) ex:0x12345678 comes as 12345678
 #define CMD_BUF_SZ 20
 
 #define CMD_VALS_FORMAT_DEC 10
@@ -63,18 +76,28 @@
 #define CMD_VALS_FORMAT_HEX 16
 #define CMD_VALS_FORMAT CMD_VALS_FORMAT_HEX
 
+//Boundary at which the carriage is currently
+#define CARLOC_LEFT_SEGS     0
+#define CARLOC_TOP_SEGS      1
+#define CARLOC_RIGHT_SEGS    2
+#define CARLOC_BOTTOM_SEGS   3
+#define CARLOC_INTERNAL_SEGS 4
+
+
 char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 to hold null character
-uint32_t pos_x_max = 91440; //1ft=304.8mm, 300ft=91440mm
-uint32_t pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t pos_x_max = 2743;//91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t pos_y_max = 1829;//91440; //1ft=304.8mm, 300ft=91440mm
+uint32_t seg_size_x = 305;
+uint32_t seg_size_y = 305;
 uint32_t this_layout_xmax = 0;
 uint32_t this_layout_ymax = 0;
 uint32_t cur_pos_x = 0; //current x position of the carriage in the layout
 uint32_t cur_pos_y = 0; //current y position of the carriage in the layout
-float cur_ang = 0.0;    //Rotation angle (degrees)of the carriage from initial (power-on) position
-uint8_t corner_num = 0; 
+float car_cur_ang = 0.0;    //Rotation angle (degrees)of the carriage from initial (power-on) position
+uint8_t car_cur_boundary = 0; 
 uint32_t req_pos_x = 0; //requested new position x of the carriage in the layout
 uint32_t req_pos_y = 0; //requested new position y of the carriage in the layout
-char  rot_dir      = MODE_ROT_DIR_CW; //Clockwise (default)
+char  rot_dir      = MODE_ROTATE_CLOCKWISE; //Clockwise (default)
 uint32_t wheel_steps = 0;
 uint32_t pending_action_wheel_steps = 0;
 bool action_pending = false;

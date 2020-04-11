@@ -14,7 +14,7 @@ void setup(void)
   SetupSerial();  //Setup PC Serial Port for Testing
   SetupPins();
   SetupMotors(); //Setup mecanum 
-  if(SelfTest() == P3RP_SUCCESS)     //call self test routine
+  if(SelfTest() == RESULT_SUCCESS)     //call self test routine
   {
     Serial.println("Carriage Controller Ready!!!");
   }
@@ -37,7 +37,10 @@ void loop(void)
   }
   RunMotors();
 }
-// ******************** Sub routunes start here **********************
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetupVariables()
 {
   memset(cmd_buf,0,CMD_BUF_SZ+1);
@@ -45,30 +48,40 @@ void SetupVariables()
   pos_y_max = 91440; //1ft=304.8mm, 300ft=91440mm
   cur_pos_x = 0; //current x position of the carriage in the layout
   cur_pos_y = 0; //current y position of the carriage in the layout
-  cur_ang = 0.0;
-  corner_num = 0; 
+  car_cur_ang = 0.0;
+  car_cur_boundary = 0; 
   this_layout_xmax = 0;
   this_layout_ymax = 0;
   req_pos_x = 0; //requested new position x of the carriage in the layout
   req_pos_y = 0; //requested new position y of the carriage in the layout
-  rot_dir   = MODE_ROT_DIR_CW; //Clockwise (default)
+  rot_dir   = MODE_ROTATE_CLOCKWISE; //Clockwise (default)
   ack_nack_sent  = false;
   action_pending = false;
   wheel_steps    = 0;
   pending_action_wheel_steps = 0;
   carriage_movement_required = false;
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetupSerial()
 { 
   Serial.begin(DBG_SER_BAUD);    //For sending console messages to Serial Termial on PC
   Serial2.begin(CMD_SER_BAUD); //For receiving control commands & sending command replies
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetupPins()
 {
   digitalWrite(ENDIS_MOTORS_PIN, HIGH);     // Enable = LOW
   pinMode(ENDIS_MOTORS_PIN, OUTPUT);
 }
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ProcessCommand(void)
 {
   Serial.print("Command Received: ");Serial.println(cmd_buf);
@@ -77,13 +90,16 @@ void ProcessCommand(void)
     case CMD_ENDIS_MOTS:
       EnableDisableMotors();
     case CMD_GOTO: //'G'
-      MoveCarriage();
+      MoveCarriageToReqPosition();
+      break;
+    case CMD_MOVE: //'M'
+      MoveCarriageByReqDistance();
       break;
     case CMD_ROTATE: //'R'
       RotateCarriage();
       break;
     case CMD_SETDIM: //'D'
-      SetLayoutDimentions();
+      SetDimensions();
       break;
     case CMD_SETSPEED: //'S'
       SetMotorsSpeed();
@@ -103,110 +119,105 @@ void ProcessCommand(void)
   }
 }
 
-void SetLayoutDimentions()
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
+void SetDimensions()
 {
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  pos_x_max = uData.f;
+  if(cmd_buf[INDX_MODE] == MODE_SETDIM_LAYOUT)
+  {
+    pos_x_max = (uint32_t)uData.f;
+  }
+  if(cmd_buf[INDX_MODE] == MODE_SETDIM_SEGMENT)
+  {
+    seg_size_x = (uint32_t)uData.f;
+  }
   memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ); //read val string characters to val_array
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);           //convert to integer
-  pos_y_max = uData.f;                             //get float value  
+  if(cmd_buf[INDX_MODE] == MODE_SETDIM_LAYOUT)
+  {
+    pos_y_max = (uint32_t)uData.f;
+  }
+  if(cmd_buf[INDX_MODE] == MODE_SETDIM_SEGMENT)
+  {
+    seg_size_y = (uint32_t)uData.f;
+  }
   Serial.print("Layout Dim x,y (mm): (");Serial.print(pos_x_max);Serial.print(",");Serial.print(pos_y_max);Serial.println(")");    
+  Serial2.write(CMD_ACK);//Send acknoledgement to master controller.
 }
-/*
-void MoveCarriage()
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
+void MoveCarriageByReqDistance()
 { 
   uint32_t dx,dy;
-  bool x_movement_required = true;
-  bool y_movement_required = true;
-  
+  uint32_t dist_to_move = 0;
+  carriage_movement_required = true;
   char val_array[VAL_STR_SZ+1]={0,};//+1 is for null char
   
-  //SetupMotors();
   memcpy(val_array,&cmd_buf[INDX_VAL1],VAL_STR_SZ);
   uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);
-  req_pos_x = (uint32_t)uData.f;
-  if(req_pos_x > pos_x_max)
-  {
-    req_pos_x = pos_x_max; //Restrict it to max value
-  }
-  else if(req_pos_x < 0)
-  {
-    req_pos_x = 0; //Restrict it to max value
-  }
-  memcpy(val_array,&cmd_buf[INDX_VAL2],VAL_STR_SZ);//read val string characters to val_array
-  uData.i = strtoul(val_array, NULL, CMD_VALS_FORMAT);//convert to integer
-  req_pos_y = (uint32_t)uData.f;
-  if(req_pos_y > pos_y_max)
-  {
-    req_pos_y = pos_y_max;//Restrict it to max value  
-  }
-  else if(req_pos_y < 0)
-  {
-    req_pos_y = 0;//Restrict it to min/0 value  
-  }
+  dist_to_move = (uint32_t)uData.f;
+//  if(dist_to_move > pos_x_max)
+//  {
+//    dist_to_move = pos_x_max; //Restrict it to max value
+//  }
+//  else if(dist_to_move < 0)
+//  {
+//    dist_to_move = 0; //Restrict it to max value
+//  }
   
   Serial.print("Current pos x,y (mm): (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.println(")");  
   Serial.print("Request pos x,y (mm): (");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
 
-  //Move carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by wheel_steps
-  //if(dx > 0.0)
-  if(req_pos_x > cur_pos_x)
-  {
-    dx = req_pos_x - cur_pos_x;
-    wheel_steps = (uint32_t)((float)dx*SPMM);
-    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" X-dir wheel_steps:");Serial.println(wheel_steps);
-    ConfigMotorsToMoveSidewaysRight();
-  }
-  //else if(dx < 0.0)
-  else if(req_pos_x < cur_pos_x)
-  {
-    dx = cur_pos_x - req_pos_x;
-    wheel_steps = (uint32_t)((float)dx*SPMM);
-    Serial.print("dx:");Serial.print(dx);Serial.print("mm");Serial.print(" X-dir wheel_steps:");Serial.println(wheel_steps);
-    ConfigMotorsToMoveSidewaysLeft();
-  }
-  else
-  {
-    Serial.println("No movement required in x-direction.");
-    x_movement_required = false;
-  }
-  //Move carriage in Forward/Backward direction based on dy '+'ve/'-'ve by wheel_steps
-  action_pending = true;//There is a followup action for the carriage to move in y-direction after moving in x-direction.
-  //if(dy > 0.0)
-  if(req_pos_y > cur_pos_y)
-  {
-    dy = req_pos_y - cur_pos_y;
-    pending_action_wheel_steps = (uint32_t)((float)dy*SPMM);
-    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" Y-dir wheel_steps:");Serial.println(pending_action_wheel_steps);
-    PendingActionConfigMotors = ConfigMotorsToMoveForward;
-  }
-  //else if(dy < 0.0)
-  else if(req_pos_y < cur_pos_y)
-  {
-    dy = cur_pos_y - req_pos_y;
-    pending_action_wheel_steps = (uint32_t)((float)dy*SPMM);
-    Serial.print("dy:");Serial.print(dy);Serial.print("mm");Serial.print(" Y-dir wheel_steps:");Serial.println(pending_action_wheel_steps);
-    PendingActionConfigMotors = ConfigMotorsToMoveBackward;
-  }
-  else
-  {
-    Serial.println("No pending/y-movement.");
-    action_pending = false;
-    y_movement_required = false;
-  }
-  cur_pos_x = req_pos_x;
-  cur_pos_y = req_pos_y;
+  wheel_steps = (uint32_t)((float)dist_to_move*SPMM);
 
-  if((x_movement_required == false) && (y_movement_required == false))
+  //Move carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by wheel_steps
+  switch(cmd_buf[INDX_MODE])
   {
+    case MODE_MOVE_FORWARD:
+      ConfigMotorsToMoveForward();
+      break;
+    case MODE_MOVE_BACKWARD:
+      ConfigMotorsToMoveBackward();
+      break;
+    case MODE_MOVE_SIDEWAYSRGIHT:
+      ConfigMotorsToMoveSidewaysRight();
+      break;
+    case MODE_MOVE_SIDEWAYSLEFT:
+      ConfigMotorsToMoveSidewaysLeft();
+      break;
+    case MODE_MOVE_RIGHTFORWARD:
+      ConfigMotorsToMoveRightForward();
+      break;
+    case MODE_MOVE_LEFTFORWARD:
+      ConfigMotorsToMoveLeftForward();
+      break;
+    case MODE_MOVE_RIGHTBACKWARD:
+      ConfigMotorsToMoveRightBackward();
+      break;
+    case MODE_MOVE_LEFTBACKWARD:
+      ConfigMotorsToMoveLeftBackward();
+      break;
+  }
+//  cur_pos_x = req_pos_x;
+//  cur_pos_y = req_pos_y;
+  action_pending = false;
+  
+  if(dist_to_move == 0)
+  {
+    carriage_movement_required = false;
     Serial2.write(CMD_ACK);//Send acknoledgement here when there is no movement required.
   }
 }
-*/
 
-void MoveCarriage()
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
+void MoveCarriageToReqPosition()
 { 
   uint32_t dx,dy,swap_temp;
   bool x_movement_required = true;
@@ -239,27 +250,27 @@ void MoveCarriage()
     req_pos_y = 0;//Restrict it to min/0 value  
   }
 
-  switch(corner_num)
+  switch(car_cur_boundary)
   {
-    case 1:
+    case CARLOC_LEFT_SEGS:               
+    case CARLOC_INTERNAL_SEGS:
+      break;      
+    case CARLOC_TOP_SEGS:
       swap_temp = req_pos_x;
       req_pos_x = req_pos_y;
       req_pos_y = swap_temp;
       break;
-    case 2:
+    case CARLOC_RIGHT_SEGS:
       req_pos_y = this_layout_ymax - req_pos_y;
       break;
-    case 3:
+    case CARLOC_BOTTOM_SEGS:
       req_pos_y = this_layout_xmax - req_pos_x;
       req_pos_x = this_layout_xmax;
       break;
-    case 0:          
-      break;      
   }
-
   
-  Serial.print("Current pos x,y (mm): (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.println(")");  
-  Serial.print("Request pos x,y (mm): (");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
+  Serial.print("Move (");Serial.print(cur_pos_x);Serial.print(",");Serial.print(cur_pos_y);Serial.print(")");  
+  Serial.print("-->(");Serial.print(req_pos_x);Serial.print(",");Serial.print(req_pos_y);Serial.println(")");  
 
   //Move carriage Right/Left Side (X-axis direction) based on dx '+'ve/'-'ve by wheel_steps
   //if(dx > 0.0)
@@ -341,42 +352,52 @@ void RotateCarriage()
   Serial.print("Rotate carriage by (deg):");Serial.print(rot_deg);Serial.print("/wheel_steps:");Serial.print(wheel_steps);
   if(rot_deg > 0.0)
   {
-    if(rot_dir == MODE_ROT_DIR_CW)
+    if(rot_dir == MODE_ROTATE_CLOCKWISE)
     {
       Serial.println(" clockwise.");  
       ConfigMotorsToRotateRight();
-      cur_ang = cur_ang + rot_deg;
-      if(cur_ang != 0.0)
+      car_cur_ang = car_cur_ang + rot_deg;
+      car_cur_boundary = car_cur_ang/90; 
+
+      //current position values transforms everytime the carriage takes ( 90°?) turn at the corner while printing boundary segments
+      //Requested segment positions also transforms, which is taken care in GOTO command handler.
+      switch(car_cur_boundary)
       {
-        corner_num = cur_ang/90; 
-      }
-      Serial.print("Carriage is at corner: ");Serial.println(corner_num);
-      switch(corner_num)
-      {
-        case 1:
+        case CARLOC_LEFT_SEGS:
+          cur_pos_x = 0;          
+          cur_pos_y = 0;
+          Serial.println("Currently printing left boundary/internal segments.");
+          break;      
+        case CARLOC_TOP_SEGS:
           this_layout_ymax = cur_pos_y;//Save ymax for this layout for future calculations
           swap_temp = cur_pos_x;
           cur_pos_x = cur_pos_y;
           cur_pos_y = swap_temp;
+          Serial.println("Currently printing top boundary segments.");
           break;
-        case 2:
+        case CARLOC_RIGHT_SEGS:
           this_layout_xmax = cur_pos_y;//Save xmax for this layout for future calculations
           cur_pos_x = cur_pos_y;
           cur_pos_y = 0;
+          Serial.println("Currently printing right boundary segments.");
           break;
-        case 3:
+        case CARLOC_BOTTOM_SEGS:
           req_pos_x = this_layout_xmax;
           cur_pos_y = 0;
+          Serial.println("Currently printing bottom boundary segments.");          
           break;
-        case 0:          
-          break;      
+        case CARLOC_INTERNAL_SEGS:
+          cur_pos_x = seg_size_x;          
+          cur_pos_y = 0;
+          Serial.println("Currently printing internal segments.");          
+          break;          
       }
     }
-    else if(rot_dir == MODE_ROT_DIR_ACW)
+    else if(rot_dir == MODE_ROTATE_ANTICLOCKWISE)
     {
       Serial.println(" anti-clockwise.");  
       ConfigMotorsToRotateLeft();
-      cur_ang = cur_ang - rot_deg;
+      car_cur_ang = car_cur_ang - rot_deg;
     }
     else
     {
@@ -416,6 +437,9 @@ void EnableDisableMotors()
   //Serial2.write(CMD_ACK);
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetMotorsSpeed()
 {
   uint32_t s_speed = 0;
@@ -431,6 +455,9 @@ void SetMotorsSpeed()
   //Serial2.write(CMD_ACK);
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetMotorsAcceleration()
 {
   uint32_t s_accel = 0;
@@ -446,6 +473,9 @@ void SetMotorsAcceleration()
   //Serial2.write(CMD_ACK);
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void SetupMotors()
 {
   //Serial.print("Setting Motors Max Speed to: ");Serial.println(CFG_MOTORS_MAXSPEED);
@@ -461,6 +491,9 @@ void SetupMotors()
   ResetMotors(); // reset poS1tions to zero  
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void StopCarriage() // Cmd format:!3X00000000000000000
 {
   ResetMotors();
@@ -519,9 +552,12 @@ uint16_t SelfTest()
   Serial.println(CARCON_VERSION_STR);
   Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
   //Other self test features to be implemented
-  return(P3RP_SUCCESS);
+  return(RESULT_SUCCESS);
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void DisplayFwVersion() // Format is !2V
 {  
   //Serial2.println(CARCON_VERSION_STR); //Send version string to master controller
@@ -580,7 +616,10 @@ void ResetMotors()
   RightFrontWheel.setCurrentPosition(0);  
 }
 
-// *********************** Move Subroutines **************
+// *********************** Move functions **************
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToRotateRight() 
 {
   Serial.println("Configuring for rotate right.");
@@ -590,6 +629,9 @@ void ConfigMotorsToRotateRight()
   RightBackWheel.moveTo(-wheel_steps);
 }
 
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToRotateLeft() 
 {
   Serial.println("Configuring for rotate left.");
@@ -598,6 +640,10 @@ void ConfigMotorsToRotateLeft()
   RightFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveSidewaysLeft() 
 {
   Serial.println("Configuring for moving right side.");
@@ -606,6 +652,10 @@ void ConfigMotorsToMoveSidewaysLeft()
   RightFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(-wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveSidewaysRight() 
 {
   Serial.println("Configuring for moving left side.");
@@ -614,6 +664,10 @@ void ConfigMotorsToMoveSidewaysRight()
   RightFrontWheel.moveTo(-wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveForward() 
 {
   Serial.println("Configuring for moving forward.");
@@ -622,6 +676,10 @@ void ConfigMotorsToMoveForward()
   RightFrontWheel.moveTo(-wheel_steps);
   RightBackWheel.moveTo(-wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveBackward() 
 {
   Serial.println("Configuring for moving backward.");
@@ -630,28 +688,43 @@ void ConfigMotorsToMoveBackward()
   RightFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveLeftForward() 
 {
   Serial.println("Configuring for moving forward left.");
   LeftFrontWheel.moveTo(-wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveLeftBackward() 
 {
   Serial.println("Configuring for moving backward left.");
   LeftBackWheel.moveTo(wheel_steps);
   RightFrontWheel.moveTo(-wheel_steps);
 }
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
 void ConfigMotorsToMoveRightForward() 
 {
   Serial.println("Configuring for moving forward right.");
   LeftBackWheel.moveTo(-wheel_steps);
   RightFrontWheel.moveTo(wheel_steps);
 }
-void ConfigMotorsToMoveRightBackward() 
+
+/*******************************************************************************************************************
+ * 
+ *******************************************************************************************************************/
+void ConfigMotorsToMoveRightBackward()
 {
   Serial.println("Configuring for moving backward right.");
-  LeftFrontWheel.moveTo(-wheel_steps);
+  LeftFrontWheel.moveTo(wheel_steps);
   RightBackWheel.moveTo(wheel_steps);
 }
- 
