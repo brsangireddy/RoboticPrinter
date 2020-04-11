@@ -21,7 +21,6 @@ void setup(void)
   {
     Serial.println("Printhead Carriage Controller Ready!!!");
   }
-  Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
 /*
 ledcWrite(SERVO_CHANNEL,255);
 while(1)
@@ -78,6 +77,8 @@ void SetupVariables()
 void SetupSerial()
 { 
   Serial.begin(DBG_SER_BAUD);    //For sending console messages to Serial Termial on PC
+  Serial.println(PHCON_VERSION_STR);
+  Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print("'");Serial.println(__TIME__);
   Serial2.begin(CMD_SER_BAUD); //For receiving control commands & sending command replies
 }
 
@@ -109,7 +110,7 @@ void MovePrintheadToHome()
 {
   XdirMotor.setSpeed(-x_motor_speed);
   YdirMotor.setSpeed(-y_motor_speed);
-  Serial.println("Move the printhead carriage to home (X0,Y0) position.");
+  //Serial.println("Move the printhead carriage to home (X0,Y0) position.");
   while((XdirMotor.currentPosition() <= 0) || (YdirMotor.currentPosition() <= 0))
   {
     if(digitalRead(X0_SENSOR_PIN))
@@ -504,15 +505,15 @@ void RunMotors()
  ****************************************************************************************************************/
 uint16_t SelfTest()
 {
-  Serial.println(PHCON_VERSION_STR);
+  //Serial.println(PHCON_VERSION_STR);
   //Other self test features to be implemented
   return(P3RP_SUCCESS);
 }
 
 void DisplayFwVersion() // Format is !2V00000000000000000
 {  
-  Serial2.println(PHCON_VERSION_STR); //Send version string to master controller
-  Serial.println(PHCON_VERSION_STR);    //For console display
+  //Serial2.println(PHCON_VERSION_STR); //Send version string to master controller
+  //Serial.println(PHCON_VERSION_STR);    //For console display
   //Serial2.write(CMD_ACK);
 }
 
@@ -651,6 +652,11 @@ void DrawLine()
     MoveTo(p2x, p2y);
     MarkerOff();        
   }
+}
+
+void DrawArc()
+{
+  
 }
 
 void MoveTo(int32_t x, int32_t y)
