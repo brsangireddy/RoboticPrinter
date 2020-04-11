@@ -51,6 +51,8 @@ void processCmd()
 }
 void setup() {
   Serial.begin(DBG_SER_BAUD); //Console port over USB
+  Serial.print("Firware Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
+  
   Serial2.begin(CMD_SER_BAUD); //Sending commands to controllers and receiving replies
 
   ConfigurePortPins();
@@ -60,23 +62,8 @@ void setup() {
   chipid=ESP.getEfuseMac();//The chip ID is essentially its MAC address(length: 6 bytes).
   Serial.printf("ESP32 Chip ID: %04X",(uint16_t)(chipid>>32));//print High 2 bytes
   Serial.printf("%08X\n",(uint32_t)chipid);//print Low 4bytes.
-  Serial.print("Build Date & Time: ");Serial.print(__DATE__);Serial.print(",");Serial.println(__TIME__);
 }
 void loop()
 {
   httpserver.handleClient();
-#if 0  
-  int rcvd_byte_cnt = readCmdBuf();
-  if(rcvd_byte_cnt > 0)
-  {
-    Serial.println((char*)cmdBuf);
-    cmdBuf[0] = '#';
-    Serial2.write(cmdBuf,CMDBUF_SZ);//Send reply to sender on ESP32's Serial port2
-    processCmd();    
-  }
-  else
-  {
-    Serial.println("No cmd received.");    
-  }
-#endif  
 }

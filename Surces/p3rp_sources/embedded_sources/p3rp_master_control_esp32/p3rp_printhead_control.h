@@ -21,7 +21,7 @@ void HndPrintHeadControlCmd()
   ph_pos_x     = 0.0;
   ph_pos_y     = 0.0;
   ph_con_cmd   = CMD_UNKNOWN;
-  pos_val_unit = DFLT_UNIT;
+  cmd_vals_unit = DFLT_UNIT;
   
   for(uint8_t i=0; i<httpserver.args(); i++)
   {
@@ -48,8 +48,8 @@ void HndPrintHeadControlCmd()
     }
     if(httpserver.argName(i) == "unit")
     {
-      pos_val_unit = httpserver.arg(i).c_str()[0];
-      Serial.print("X,Y Values unit: ");Serial.println(pos_val_unit);
+      cmd_vals_unit = httpserver.arg(i).c_str()[0];
+      Serial.print("X,Y Values unit: ");Serial.println(cmd_vals_unit);
     }        
   }
   ProcessPrintHeadControlCmd();
@@ -69,8 +69,8 @@ void ProcessPrintHeadControlCmd()
   cmd_buf[INDX_SOCF] = SOCF;               //Start of command or command qualifier
   cmd_buf[INDX_TGT]  = TGT_PRINTHEAD_CON; //Target's ASCII value '3'  
   cmd_buf[INDX_CMD]  = ph_con_cmd;        //Command type - goto command
-  cmd_buf[INDX_MODE] = pos_val_unit;
-  switch(pos_val_unit)
+  cmd_buf[INDX_MODE] = cmd_vals_unit;
+  switch(cmd_vals_unit)
   {
     case UNIT_CM:        
       ph_pos_x = ph_pos_x * CM2MM; //conver cm to mm
@@ -110,6 +110,7 @@ uint8_t PrintSegment()
   String sub_line = "";
   int32_t x_motion = 0;
   int32_t y_motion = 0;
+  int32_t swap_temp = 0;
   int32_t x_indx=-1;
   int32_t y_indx=-1;
   char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 for holding null char
@@ -121,7 +122,7 @@ uint8_t PrintSegment()
     return RESULT_ERROR;
   }
 
-  Serial.println("Printing segment file started.");
+  Serial.println("Printing segment started...");
   while(sfh.available())
   {
     //case G00,G01:
@@ -152,8 +153,31 @@ uint8_t PrintSegment()
       cmd_buf[INDX_MODE] |= Y_MOTION;
       //Serial.print("y = ");Serial.print(y_motion);
     }    
-    //Serial.println();
-    //Send these values to print head control module in the frame packet.
+    //Transform x,y coordinates based on carriage current boundary (0-left boundary/internal segments, 1-top, 2-right, 3-bottom 
+    switch(car_cur_boundary)
+    {
+      case CARLOC_LEFT_SEGS:
+      case CARLOC_INTERNAL_SEGS: //carriage might have come to it's reset position angle after four 90° turns at each corner
+        //No transformation required      
+        break;
+      case CARLOC_TOP_SEGS:
+        //(x,y)->(ymax-y,x). ymax = seg_size_y
+        swap_temp = x_motion;
+        x_motion = seg_size_y - y_motion;
+        y_motion = swap_temp;
+        break;
+      case CARLOC_RIGHT_SEGS:
+        x_motion = seg_size_x - x_motion;
+        y_motion = seg_size_y - y_motion;
+        break;
+      case CARLOC_BOTTOM_SEGS:
+        swap_temp = x_motion;
+        x_motion = y_motion;
+        y_motion = seg_size_x - x_motion;
+        break;
+    }
+        
+    //Send these values to print head control module in the frame packet.    
     if((cmd_buf[INDX_MODE] & X_MOTION)||(cmd_buf[INDX_MODE] & Y_MOTION))
     {
       SelectSerialPort(PRINTHEAD_COM_PORT);
@@ -164,7 +188,7 @@ uint8_t PrintSegment()
       sprintf(&cmd_buf[INDX_VAL1],"%08X",(uint32_t)uData.i);
       uData.f = y_motion;
       sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i);  
-      Serial.println(cmd_buf); //Print for local debugging
+      //Serial.println(cmd_buf); //Print for local debugging
 #if 1       
       Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ);//Send command string to carriage control module
       delay(10);
@@ -185,6 +209,7 @@ uint8_t PrintSegment()
   }
   sfh.close();
   //SPIFFS.remove(sfh.name());
+  Serial.println("Printing segment complete.");
   return RESULT_SUCCESS;
 }
 

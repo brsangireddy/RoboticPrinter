@@ -46,8 +46,8 @@ void ConfigurePortPins()
   digitalWrite(BUZZER_PIN, LOW);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  //digitalWrite(LASERX_IDENTIFY_PIN, LOW);
-  //pinMode(LASERX_IDENTIFY_PIN, OUTPUT);
+  digitalWrite(LASERX_IDENTIFY_PIN, LOW);
+  pinMode(LASERX_IDENTIFY_PIN, OUTPUT);
    
 }
 
@@ -56,8 +56,7 @@ void ConfigurePortPins()
  *********************************************************************************************/
 void ConfigureWiFi()
 {
-  Serial.print("Configuring WiFi & connecting to...");
-  Serial.println(SSID);
+  Serial.print("Connecting to ");Serial.print(SSID);Serial.println(" WiFi...");
   WiFi.begin (SSID, PWD);
   
   if( WiFi.waitForConnectResult() != WL_CONNECTED )//while ( WiFi.waitForConnectResult() != WL_CONNECTED )   //while(WiFi.status() != WL_CONNECTED )
@@ -324,7 +323,9 @@ void HndPrintSegmentCmd()
     httpserver.send(400, "text/html", resp_str);  
   }
 }
-
+/*******************************************************************************************************
+ * 
+ *******************************************************************************************************/
 uint8_t ProcessPrintSegmentCmd()
 {
   uint8_t result;
@@ -346,9 +347,9 @@ uint8_t ProcessPrintSegmentCmd()
     y_seg = file_name.substring(6,9).toInt();
     //Serial.print("x,y segment numbers: ");Serial.print(x_seg);Serial.print(",");Serial.println(y_seg);
 
-    car_posX_rotDeg = x_seg * hpcXmax;
-    car_posY_rotMin = y_seg * hpcYmax;
-    Serial.print("Move carriage to segment: ");Serial.print(x_seg);Serial.print(",");Serial.print(y_seg);Serial.print(" pos: ");Serial.print(car_posX_rotDeg);Serial.print(",");Serial.println(car_posY_rotMin);
+    cmd_val1 = x_seg * seg_size_x;
+    cmd_val2 = y_seg * seg_size_y;
+    Serial.print("Moving carriage to segment:");Serial.print(x_seg);Serial.print(",");Serial.print(y_seg);Serial.print(" Pos:");Serial.print(cmd_val1);Serial.print(",");Serial.println(cmd_val2);
 
     //Send command to carriage control unit to move the carriage to desired segment to be printed
     SelectSerialPort(CARRIAGE_COM_PORT);
@@ -358,9 +359,9 @@ uint8_t ProcessPrintSegmentCmd()
     cmd_buf[INDX_CMD]  = CMD_GOTO;        //Command type - goto command
     cmd_buf[INDX_MODE] = UNIT_MM;
     
-    uData.f = car_posX_rotDeg;
+    uData.f = cmd_val1;
     sprintf(&cmd_buf[INDX_VAL1],"%08X",(uint32_t)uData.i);
-    uData.f = car_posY_rotMin;
+    uData.f = cmd_val2;
     sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i);  
     Serial.println(cmd_buf); //Print for local debugging
 #if 1     
@@ -396,8 +397,8 @@ uint8_t DownloadSegmentFile()
 {
   File rdfh; //Receive Data File Handle for writing to the device
     
-  if(!client.connect(IPAddress(ftps_ip[0],ftps_ip[1],ftps_ip[2],ftps_ip[3]), FTP_PORT)) //connect to ftp server
   //if(!client.connect(ftp_server, FTP_PORT)) //connect to ftp server
+  if(!client.connect(IPAddress(ftps_ip[0],ftps_ip[1],ftps_ip[2],ftps_ip[3]), FTP_PORT)) //connect to ftp server
   {
     Serial.println(F("Command connection failed"));
     return 0;
@@ -440,7 +441,8 @@ uint8_t DownloadSegmentFile()
   hiport = hiport | loport;
   //Serial.println(hiport);
 
-  if(!dclient.connect(ftp_server, hiport))
+  //if(!dclient.connect(ftp_server, hiport))
+  if(!dclient.connect(IPAddress(ftps_ip[0],ftps_ip[1],ftps_ip[2],ftps_ip[3]), hiport))  
   {
     Serial.println(F("Data connection failed"));
     client.stop();
@@ -453,6 +455,7 @@ uint8_t DownloadSegmentFile()
   client.println(&segfile_path_name[1]);
   if (!readServerResp())
   {
+    Serial.println("Does not exist on the server.");
     dclient.stop();
     return 0;
   }

@@ -66,19 +66,29 @@
 #define CMD_RESP_ACK 'A'
 #define CMD_RESP_NACK 'N'
 
-//Direction related constants & strings
-#define DIR_CLOCKWISE 'C'
-#define DIR_ANTICLOCK 'A'
-#define DIR_LF '2'
-#define DIR RF '3'
-#define DIR_LB '4'
-#define DIR RB '5'
-#define DIR_SL '6'
-#define DIR SR '7'
-#define DIR_FW '8'
-#define DIR_BW '9'
+#define CMD_MODE_UNKNOWN    'U'
+#define MODE_SETDIM_LAYOUT  'L'
+#define MODE_SETDIM_SEGMENT 'S'
 
-const PROGMEM String dir_strs[] = {"Clockwise","Anticlockwise","Front-Left","Front-Right","Back-Left","Back-Right","Sideways Left","Sideways Right","Forward","Backward"};
+
+//Mode values for Rotate command
+#define MODE_ROTATE_CLOCKWISE     'C'
+#define MODE_ROTATE_ANTICLOCKWISE 'A'
+//Mode values for MOve command
+#define MODE_MOVE_FORWARD         '1'
+#define MODE_MOVE_BACKWARD        '2'
+#define MODE_MOVE_SIDEWAYSRGIHT   '3'
+#define MODE_MOVE_SIDEWAYSLEFT    '4'
+#define MODE_MOVE_RIGHTFORWARD    '5'
+#define MODE_MOVE_LEFTFORWARD     '6'
+#define MODE_MOVE_RIGHTBACKWARD   '7'
+#define MODE_MOVE_LEFTBACKWARD    '8'
+//Mode vals for Goto command
+#define X_MOTION '1'//0x31
+#define Y_MOTION '2'//0x32
+#define PEN_ON   '4' //0x34
+
+//const PROGMEM String dir_strs[] = {"Clockwise","Anticlockwise","Front-Left","Front-Right","Back-Left","Back-Right","Sideways Left","Sideways Right","Forward","Backward"};
 
 #define INDX_SOCF  0 //Index for Start of Command Frame
 #define INDX_TGT   1 //Index for Target: Carriage control, Printhead control etc.
@@ -86,6 +96,13 @@ const PROGMEM String dir_strs[] = {"Clockwise","Anticlockwise","Front-Left","Fro
 #define INDX_MODE  3 //Index for Command mode like direction 
 #define INDX_VAL1  4 //Index for Command value 1 (dist,angle, x_pos etc.)
 #define INDX_VAL2 12 //Index for Command value 2 (y_pos etc.)
+
+//Carriage current location in the layout
+#define CARLOC_LEFT_SEGS     0
+#define CARLOC_TOP_SEGS      1
+#define CARLOC_RIGHT_SEGS    2
+#define CARLOC_BOTTOM_SEGS   3
+#define CARLOC_INTERNAL_SEGS 4
 
 //Conversion factors to mm
 #define CM2MM 10.0   //Cm to mm
@@ -100,16 +117,18 @@ uint16_t hpcX    = 0;     //printerHead Position in Carriage (HPC) at any instan
 uint16_t hpcY    = 0;     //printerHead Position in Carriage (HPC) at any instance in Y directions 
 uint32_t cplXmax = 91440; //Carriage Position in Layout (CPL) maximum in X direction 300' (feet) (Plan to cover 300'X300' area)
 uint32_t cplYmax = 91440; //Carriage Position in Layout (CPL) maximum in Y direction 300' (feet) (Plan to cover 300'X300' area)
-float hpcXmax = 457.2;//640;   //Maximum Head Position in Carriage (millimeters) in X-direction
-float hpcYmax = 304.8;//380;   //Maximum Head Position in Carriage (millimeters) in Y-direction
-char pos_val_unit = DFLT_UNIT;
+float seg_size_x = 305.0;//640;   //Maximum Head Position in Carriage (millimeters) in X-direction
+float seg_size_y = 305.0;//380;   //Maximum Head Position in Carriage (millimeters) in Y-direction
+float car_cur_ang = 0.0;   //net current angle of the carriage from reset. clockwise, add to car_cur_ang, anticlockwise, subtract from car_cur_ang
+uint8_t car_cur_boundary = 0;
+char cmd_vals_unit = DFLT_UNIT;
 char segfile_name[] = "jjxxxyyy.gcd";//jj:job code/id 2 chars, xxx:segment number in x-direction 000-999,yyy:segment number in y direction 000-999, gcd:GCoDe
 char segfile_path_name[]="/jjxxxyyyy.gcd";
 //char segfile_path_name[]="/p3rp_layout_files/gcode/jjxxxyyyy.gcd";
 #define FILE_NAME_START_INDX 0//24
 #define FILE_NAME_SZ 14 //one character for '/', 8 characters for name, one for '.', 3 for extension 'gcd', 1 for null termination
 
-uint8_t ftps_ip[4] = {192, 168, 0, 3};
+uint8_t ftps_ip[4] = {192, 168, 0, 12};
 IPAddress ftp_server(ftps_ip[0], ftps_ip[1], ftps_ip[2], ftps_ip[3]);//(192,168,0,2);//FTP server IP address
 
 #define FTP_PORT 21
