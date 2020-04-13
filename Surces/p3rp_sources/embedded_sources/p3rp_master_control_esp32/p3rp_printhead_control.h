@@ -173,7 +173,7 @@ uint8_t PrintSegment()
       case CARLOC_BOTTOM_SEGS:
         swap_temp = x_motion;
         x_motion = y_motion;
-        y_motion = seg_size_x - x_motion;
+        y_motion = seg_size_x - swap_temp;
         break;
     }
         
