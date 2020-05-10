@@ -15,7 +15,7 @@ void setup(void)
   SetupPins();
   SetupMotors(); //Setup stepper motors
   SetupPrintHead();
-  SetupServo(); 
+  SetupServo();  
   MovePrintheadToHome();//to (x,y)=(0,0)
   if(SelfTest() == P3RP_SUCCESS)     //call self test routine
   {
@@ -87,8 +87,9 @@ void SetupPins()
   digitalWrite(ENDIS_MOTORS_PIN, LOW); //X,Y motors Enable = LOW (EN is active low)
   
   pinMode(ENDIS_MOTORS_PIN, OUTPUT);
-  pinMode(X0_SENSOR_PIN,INPUT);    //printhead home position x switch pin as input to read switch status
-  pinMode(Y0_SENSOR_PIN,INPUT);    //printhead home position y switch pin as input to read switch status
+  pinMode(X0_SENSOR_PIN,INPUT);     //printhead home position x switch pin as input to read switch status
+  pinMode(Y0LEFT_SENSOR_PIN,INPUT); //printhead home position y-left switch pin as input to read switch status
+  pinMode(Y0RIGHT_SENSOR_PIN,INPUT);//y-right
 
 }
 
@@ -102,7 +103,7 @@ void SetupPrintHead()
 
 void SetupServo()
 {
-  MarkerUpDownServo.attach(SERVO_PIN);
+  MarkerUpDownServo.attach(SERVO_CONTROL_PIN);
   MarkerOff();
 }
 
@@ -113,16 +114,19 @@ void MovePrintheadToHome()
   //Serial.println("Move the printhead carriage to home (X0,Y0) position.");
   while((XdirMotor.currentPosition() <= 0) || (YdirMotor.currentPosition() <= 0))
   {
+    
     if(digitalRead(X0_SENSOR_PIN))
     {
       XdirMotor.runSpeed();
     }
-    if(digitalRead(Y0_SENSOR_PIN))
+    if(digitalRead(Y0LEFT_SENSOR_PIN) || digitalRead(Y0RIGHT_SENSOR_PIN))
     {
       YdirMotor.runSpeed();
     }
-    if((digitalRead(X0_SENSOR_PIN) == LOW) && (digitalRead(Y0_SENSOR_PIN) == LOW))
+    //Serial.print(digitalRead(X0_SENSOR_PIN));Serial.print(digitalRead(Y0LEFT_SENSOR_PIN));Serial.println(digitalRead(Y0RIGHT_SENSOR_PIN));
+    if((digitalRead(X0_SENSOR_PIN) == LOW) && (digitalRead(Y0LEFT_SENSOR_PIN) == LOW)&& (digitalRead(Y0RIGHT_SENSOR_PIN) == LOW))
     {
+      //Serial.print("In:");Serial.print(digitalRead(X0_SENSOR_PIN));Serial.print(digitalRead(Y0LEFT_SENSOR_PIN));Serial.println(digitalRead(Y0RIGHT_SENSOR_PIN));
       XdirMotor.setCurrentPosition(0);
       YdirMotor.setCurrentPosition(0);
       break;
@@ -164,6 +168,9 @@ void ProcessCommand(void)
       break;
     case CMD_MOVE: //'M'
       MovePrintheadCarriageByDistance();//Moves phc (print head carriage) by specified distance left/right and up/down
+      break;
+    case CMD_DRAW_LINE: //'L'
+      DrawLine();//Moves phc (print head carriage) by specified distance left/right and up/down
       break;
     case CMD_SETDIM: //'D'
       SetPrintFrameDimentions();
@@ -364,6 +371,7 @@ void MovePrintheadCarriageByDistance()
   
   if((x_movement_required == false) && (y_movement_required == false))
   {
+    MarkerOff();
     Serial.println("Sending ACK");
     Serial2.write(CMD_RESP_ACK);//Send acknoledgement here as it will not be sent from run motors.
     phc_movement_required = false;
@@ -475,7 +483,7 @@ void RunMotors()
         XdirMotor.runSpeed();
       }
       //if(YdirMotor.distanceToGo() != -y_motor_steps)
-      if((YdirMotor.distanceToGo() != -y_motor_steps) && (y_motor_steps != 0))// && (digitalRead(Y0_SENSOR_PIN) == LOW))//YMAX_SENSOR_PIN check to be added
+      if((YdirMotor.distanceToGo() != -y_motor_steps) && (y_motor_steps != 0))// && (digitalRead(Y0LEFT_SENSOR_PIN) == LOW))//YMAX_SENSOR_PIN check to be added
       {
         YdirMotor.runSpeed();
       }
@@ -614,24 +622,35 @@ void ConfigYdirMotorToMoveBackward()
 
 void MarkerOn()
 {
-  //ledcWrite(SERVO_CHANNEL, 0);
   MarkerUpDownServo.write(MARKER_ON_ANG);
-  delay(100);
+  delay(1000);
 }
 
 void MarkerOff()
 {
-  //ledcWrite(SERVO_CHANNEL, 128);
   MarkerUpDownServo.write(MARKER_OFF_ANG);
-  delay(100); 
+  delay(1000); 
 }
 
 void DrawLine()
 {
-  int32_t cpx,cpy;
-  int32_t p1x,p1y;
-  int32_t p2x,p2y;
-  uint32_t dist_cp_p1, dist_cp_p2, dist_p1_p2;
+  int16_t cpx,cpy;
+  int16_t p1x,p1y;
+  int16_t p2x,p2y;
+  uint16_t dist_cp_p1, dist_cp_p2, dist_p1_p2;
+  
+  char val_array[4+1]={0,};//+1 is for null char
+  memcpy(val_array,&cmd_buf[INDX_VAL1],4);
+  p1x = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+  memcpy(val_array,&cmd_buf[INDX_VAL1+4],4);
+  p1y = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+  memcpy(val_array,&cmd_buf[INDX_VAL2],4);
+  p2x = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+  memcpy(val_array,&cmd_buf[INDX_VAL2+4],4);
+  p2y = strtoul(val_array, NULL, CMD_VALS_FORMAT);
+
+  cpx = cur_pos_x;
+  cpy = cur_pos_y;
 
   dist_cp_p1 = (uint32_t)sqrt(sq(p1x-cpx)+sq(p1y-cpy));
   dist_cp_p2 = (uint32_t)sqrt(sq(p2x-cpx)+sq(p2y-cpy));

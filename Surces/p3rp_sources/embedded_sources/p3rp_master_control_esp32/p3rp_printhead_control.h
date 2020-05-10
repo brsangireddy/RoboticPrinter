@@ -129,7 +129,7 @@ uint8_t PrintSegment()
     gc_line = sfh.readStringUntil('\n');
     x_motion = 0;
     y_motion = 0;
-    cmd_buf[INDX_MODE] = 0;//Clear X,Y-motion flags in the command mode
+    cmd_buf[INDX_MODE] = 0;//Clear X,Y-motion flags & turn off PEN
 
     if(gc_line.indexOf("G01") != -1)//If this is G01 code, pen should be ON. For G00 movement pen need not be turned ON
     {
@@ -152,7 +152,9 @@ uint8_t PrintSegment()
       y_motion = y_motion * IN2MM;//convert inches to millimeter
       cmd_buf[INDX_MODE] |= Y_MOTION;
       //Serial.print("y = ");Serial.print(y_motion);
-    }    
+    }
+
+    Serial.print(car_cur_boundary);Serial.print(" Trans: ");Serial.print(x_motion);Serial.print(",");Serial.print(y_motion);
     //Transform x,y coordinates based on carriage current boundary (0-left boundary/internal segments, 1-top, 2-right, 3-bottom 
     switch(car_cur_boundary)
     {
@@ -176,7 +178,7 @@ uint8_t PrintSegment()
         y_motion = seg_size_x - swap_temp;
         break;
     }
-        
+    Serial.print("-->");Serial.print(x_motion);Serial.print(",");Serial.println(y_motion);
     //Send these values to print head control module in the frame packet.    
     if((cmd_buf[INDX_MODE] & X_MOTION)||(cmd_buf[INDX_MODE] & Y_MOTION))
     {

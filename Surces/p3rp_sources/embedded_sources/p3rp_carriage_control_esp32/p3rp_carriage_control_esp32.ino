@@ -373,6 +373,7 @@ void RotateCarriage()
           swap_temp = cur_pos_x;
           cur_pos_x = cur_pos_y;
           cur_pos_y = swap_temp;
+          cur_pos_y += seg_size_x;
           Serial.println("Currently printing top boundary segments.");
           break;
         case CARLOC_RIGHT_SEGS:
@@ -384,6 +385,7 @@ void RotateCarriage()
         case CARLOC_BOTTOM_SEGS:
           req_pos_x = this_layout_xmax;
           cur_pos_y = 0;
+          cur_pos_y += seg_size_x;
           Serial.println("Currently printing bottom boundary segments.");          
           break;
         case CARLOC_INTERNAL_SEGS:

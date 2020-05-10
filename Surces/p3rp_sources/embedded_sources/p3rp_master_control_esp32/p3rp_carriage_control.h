@@ -35,7 +35,7 @@ void HndCarriageControlCmd()
     if(httpserver.argName(i) == "dir")
     {
       car_cmd_mode = httpserver.arg(i).c_str()[0];
-      Serial.print("Carriage rotate dir:");Serial.println(car_cmd_mode);
+      Serial.print("Carriage move dir:");Serial.println(car_cmd_mode);
     }
     if(httpserver.argName(i) == "dist")
     {
@@ -158,7 +158,7 @@ void ProcessCarriageControlCmd()
       {
         car_cur_ang -= ang;
       }
-      car_cur_boundary = car_cur_ang/90.0;
+      car_cur_boundary = ((uint32_t)car_cur_ang%360)/90;
       Serial.print("Current net angle: ");Serial.print(car_cur_ang);Serial.print("Current boundary: ");Serial.println(car_cur_boundary);
       Serial.print("Rotate Carriage by: ");Serial.print(cmd_val1);Serial.print("°");Serial.print(cmd_val2);Serial.print("'");Serial.println(car_cmd_mode);
       break;
@@ -168,8 +168,8 @@ void ProcessCarriageControlCmd()
   uData.f = cmd_val2;
   sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i); //write carriage goto position value y or rotate min value to cmd buffer
   Serial.println(cmd_buf);
-#if 1       
-  Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ); //Send command string to carriage control module. Just send CMD_BUF_SZ.
+#if 0       
+  Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ); //Send command string (CMD_BUF_SZ bytes) to carriage control module.
   while(1)//Wait until ACK is received from print head controller
   {       
     if(Serial2.available()>0)

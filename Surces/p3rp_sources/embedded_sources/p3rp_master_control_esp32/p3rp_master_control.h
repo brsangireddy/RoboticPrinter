@@ -12,6 +12,7 @@ void HndNotFound();
 void HndDisplayFileListCmd();
 void HndDeleteFilesCmd();
 void HndIdentifyCarriageCmd();
+void HndLaserXOnOffCmd();
 void HndSetFtpServerIpCmd();
 
 uint8_t ProcessPrintSegmentCmd();
@@ -46,9 +47,18 @@ void ConfigurePortPins()
   digitalWrite(BUZZER_PIN, LOW);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  digitalWrite(LASERX_IDENTIFY_PIN, LOW);
-  pinMode(LASERX_IDENTIFY_PIN, OUTPUT);
+  digitalWrite(LASERX_PIN, LOW);
+  pinMode(LASERX_PIN, OUTPUT);
    
+}
+
+/*********************************************************************************************
+ *Initialize all the global variables to their reset values 
+ *********************************************************************************************/
+void ResetVariables()
+{
+  car_cur_ang = 0.0;
+  car_cur_boundary = 0;
 }
 
 /*********************************************************************************************
@@ -148,6 +158,7 @@ void ConfigureHttpServer()
   httpserver.on("/PrintSegment", HndPrintSegmentCmd);
   httpserver.on("/DisplayFileList", HndDisplayFileListCmd);
   httpserver.on("/DeleteFiles", HndDeleteFilesCmd);  
+  httpserver.on("/LaserXOnOff", HndLaserXOnOffCmd);  
   httpserver.onNotFound(HndNotFound);
   httpserver.begin();
   Serial.println("http server started");
@@ -286,14 +297,39 @@ void HndIdentifyCarriageCmd()
   Serial.println("Carriage Identification...watch the blinking laser X");
   for(int count = 0; count < IDENTIFY_BLINKS_COUNT; count++)
   {
-    digitalWrite(LASERX_IDENTIFY_PIN, HIGH);
+    digitalWrite(LASERX_PIN, HIGH);
     delay(500);
-    digitalWrite(LASERX_IDENTIFY_PIN, LOW);
+    digitalWrite(LASERX_PIN, LOW);
     delay(500);
   }
   httpserver.send(200, "text/html", "ok");  
 }
 
+/*************************************************************************************
+ * 
+ *************************************************************************************/
+void HndLaserXOnOffCmd()
+{
+  for(uint8_t i=0; i<httpserver.args(); i++)
+  {
+    if(httpserver.argName(i) == "status")
+    {
+      if(httpserver.arg(i) == "on")
+      {
+        digitalWrite(LASERX_PIN, HIGH);      
+      }
+      if(httpserver.arg(i) == "off")
+      {
+        digitalWrite(LASERX_PIN, LOW);      
+      }
+    }
+  }
+  httpserver.send(200, "text/html", "ok");    
+}
+
+/*************************************************************************************
+ * 
+ *************************************************************************************/
 void HndPrintSegmentCmd()
 {
   uint8_t result;
@@ -332,7 +368,7 @@ uint8_t ProcessPrintSegmentCmd()
   uint8_t ack_nack = CMD_RESP_NACK;
   int32_t x_seg = 0;
   int32_t y_seg = 0;
-  String file_name = "/jjxxxyyy.gcd";//dummy file name, resembles segment gcode file name
+  String file_name = "/jjxxxyyy.gcd";//file name format, jj-job id/number, xxx-x-segment number, yyy-y-segment number in decimal format
   char cmd_buf[CMD_BUF_SZ+1]={0,}; //+1 for holding null char
 
   result = DownloadSegmentFile();
@@ -343,8 +379,8 @@ uint8_t ProcessPrintSegmentCmd()
       file_name[i] = segfile_name[i];
     }
     //Serial.println(file_name);
-    x_seg = file_name.substring(3,6).toInt();
-    y_seg = file_name.substring(6,9).toInt();
+    x_seg = file_name.substring(INDX_XSEG_NUM,INDX_XSEG_NUM+SEG_NUM_SZ).toInt();
+    y_seg = file_name.substring(INDX_YSEG_NUM,INDX_YSEG_NUM+SEG_NUM_SZ).toInt();
     //Serial.print("x,y segment numbers: ");Serial.print(x_seg);Serial.print(",");Serial.println(y_seg);
 
     cmd_val1 = x_seg * seg_size_x;
@@ -364,7 +400,7 @@ uint8_t ProcessPrintSegmentCmd()
     uData.f = cmd_val2;
     sprintf(&cmd_buf[INDX_VAL2],"%08X",(uint32_t)uData.i);  
     Serial.println(cmd_buf); //Print for local debugging
-#if 1     
+#if 0     
     Serial2.write((uint8_t*)cmd_buf,CMD_BUF_SZ);//Send command string to carriage control module
 
     while(1)//Wait till ACK is received from carriage controller
@@ -382,7 +418,8 @@ uint8_t ProcessPrintSegmentCmd()
     Serial.println("ACK received from carriage controller");
     result = PrintSegment(); //handled by printhead control unit for printing.
 #else
-  result = RESULT_SUCCESS;    
+  result = PrintSegment(); //handled by printhead control unit for printing.
+  //result = RESULT_SUCCESS;    
 #endif
   }  
   return result;  

@@ -76,7 +76,7 @@
 #define CMD_VALS_FORMAT_HEX 16
 #define CMD_VALS_FORMAT CMD_VALS_FORMAT_HEX
 
-//Boundary at which the carriage is currently
+//Carriage current location in the layout
 #define CARLOC_LEFT_SEGS     0
 #define CARLOC_TOP_SEGS      1
 #define CARLOC_RIGHT_SEGS    2

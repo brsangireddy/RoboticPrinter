@@ -56,6 +56,7 @@ void setup() {
   Serial2.begin(CMD_SER_BAUD); //Sending commands to controllers and receiving replies
 
   ConfigurePortPins();
+  ResetVariables();
   ConfigureWiFi();
   ConfigureHttpServer();
   SPIFFS.begin(); 

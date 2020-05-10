@@ -31,7 +31,7 @@
 #define SP_S3   19
 
 #define BUZZER_PIN 12
-#define LASERX_IDENTIFY_PIN 13
+#define LASERX_PIN 13
 
 #define IDENTIFY_BLINKS_COUNT 3
 
@@ -54,17 +54,20 @@
 #define CMD_VALS_FORMAT CMD_VALS_FORMAT_HEX
 
 //Command codes
-#define CMD_SETDIM  'D' //length & breadth set by control panel software (running on the tab/laptop) after loading the layout to it
-#define CMD_GOTO    'G' //Goto x,y position (CMD='G', MODE='m'/'c'/'i'/'f'/'M', VAL1=x, VAL2=y in command string to target
-                        //'m'=mm,'c'=cm,'i'=inches,'f'=foot, 'M'=meter
-#define CMD_MOVE    'M' //Move distances in x,y direction from the current position
-                        //(CMD='M', MODE='1'/'2'/'3' ('1':X-movement only, '2':y-movement only, '3':both x-movement & y-movement)
-                        //VAL1=x-distance(mm), VAL2=y-ditance (mm) in command string to target
-#define CMD_ROTATE  'R' //Clockwise/Anticlockwise, deg, min (CMD='R', MODE='A'/'C' (AntiCW/Clockwise), VAL1=deg, VAL2=min in command string)
-#define CMD_UNKNOWN 'U' //Unknown command
+#define CMD_SETDIM      'D' //length & breadth set by control panel software (running on the tab/laptop) after loading the layout to it
+#define CMD_GOTO        'G' //Goto x,y position (CMD='G', MODE='m'/'c'/'i'/'f'/'M', VAL1=x, VAL2=y in command string to target
+                            //'m'=mm,'c'=cm,'i'=inches,'f'=foot, 'M'=meter
+#define CMD_MOVE        'M' //Move distances in x,y direction from the current position
+                            //(CMD='M', MODE='1'/'2'/'3' ('1':X-movement only, '2':y-movement only, '3':both x-movement & y-movement)
+                            //VAL1=x-distance(mm), VAL2=y-ditance (mm) in command string to target
+#define CMD_ROTATE      'R' //Clockwise/Anticlockwise, deg, min (CMD='R', MODE='A'/'C' (AntiCW/Clockwise), VAL1=deg, VAL2=min in command string)
+#define CMD_DRAW_LINE   'L'
+#define CMD_DRAW_ARC    'A'
+#define CMD_DRAW_CIRCLE 'C'
+#define CMD_UNKNOWN     'U' //Unknown command
 
-#define CMD_RESP_ACK 'A'
-#define CMD_RESP_NACK 'N'
+#define CMD_RESP_ACK    'A'
+#define CMD_RESP_NACK   'N'
 
 #define CMD_MODE_UNKNOWN    'U'
 #define MODE_SETDIM_LAYOUT  'L'
@@ -87,6 +90,7 @@
 #define X_MOTION '1'//0x31
 #define Y_MOTION '2'//0x32
 #define PEN_ON   '4' //0x34
+#define PEN_OFF  0xCB //0x34 0xCB
 
 //const PROGMEM String dir_strs[] = {"Clockwise","Anticlockwise","Front-Left","Front-Right","Back-Left","Back-Right","Sideways Left","Sideways Right","Forward","Backward"};
 
@@ -97,6 +101,11 @@
 #define INDX_VAL1  4 //Index for Command value 1 (dist,angle, x_pos etc.)
 #define INDX_VAL2 12 //Index for Command value 2 (y_pos etc.)
 
+#define INDX_XSEG_NUM 3 //x-segment number start index in the file name string stored in SPIFFS
+#define INDX_YSEG_NUM 6 //y-seg number start index
+#define SEG_NUM_SZ    3 //seg number in the file name is 3-digit
+
+
 //Carriage current location in the layout
 #define CARLOC_LEFT_SEGS     0
 #define CARLOC_TOP_SEGS      1
@@ -106,8 +115,8 @@
 
 //Conversion factors to mm
 #define CM2MM 10.0   //Cm to mm
-#define IN2MM 25.4   //Inch to mm
-#define FT2MM 304.8  //Foot to mm
+#define IN2MM 25.42  //Inch to mm
+#define FT2MM 305.0  //Foot to mm
 #define YD2MM 914.4  //Yard to mm
 #define MT2MM 1000.0 //Meter to mm 
 
